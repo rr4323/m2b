@@ -25,6 +25,12 @@ from agents.test_agent import TestAgent
 from agents.deploy_agent import DeployAgent
 from agents.marketing_agent import MarketingAgent
 from agents.analytics_agent import AnalyticsAgent
+from agents.knowledge_graph_agent import KnowledgeGraphAgent
+from workflows.graph_rag_integration import (
+    enrich_product_with_knowledge_graph,
+    generate_enhanced_blueprint_with_kg,
+    analyze_market_with_knowledge_graph
+)
 
 class SaasCloneGraph:
     """Workflow manager for the SaaS Cloner system."""
@@ -46,6 +52,7 @@ class SaasCloneGraph:
         self.deploy_agent = DeployAgent()
         self.marketing_agent = MarketingAgent()
         self.analytics_agent = AnalyticsAgent()
+        self.knowledge_graph_agent = KnowledgeGraphAgent()
         
         # Create the workflow
         self.workflow = self._create_workflow()
@@ -111,13 +118,84 @@ class SaasCloneGraph:
         deploy_node = self._create_agent_node(self.deploy_agent)
         marketing_node = self._create_agent_node(self.marketing_agent)
         analytics_node = self._create_agent_node(self.analytics_agent)
+        knowledge_graph_node = self._create_agent_node(self.knowledge_graph_agent)
+        
+        # Custom nodes for knowledge graph integration
+        def enrich_market_discovery(state: Dict[str, Any]) -> Dict[str, Any]:
+            """Enrich market discovery results with knowledge graph insights"""
+            self.logger.info("Enhancing product discovery with knowledge graph")
+            
+            try:
+                # Process discovered products with knowledge graph
+                products = state.get("products", [])
+                enhanced_products = []
+                
+                # Process each product asynchronously
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    for product in products:
+                        # Enrich product with knowledge graph
+                        enhanced_product = loop.run_until_complete(
+                            enrich_product_with_knowledge_graph(product)
+                        )
+                        enhanced_products.append(enhanced_product)
+                finally:
+                    loop.close()
+                
+                # Replace products with enhanced products
+                state["products"] = enhanced_products
+                state["knowledge_graph_enabled"] = True
+                
+                return state
+            except Exception as e:
+                self.logger.error(f"Error enhancing products with knowledge graph: {e}")
+                # Return original state if enhancement fails
+                return state
+        
+        def enhance_blueprint(state: Dict[str, Any]) -> Dict[str, Any]:
+            """Enhance blueprint with knowledge graph insights"""
+            self.logger.info("Enhancing blueprint with knowledge graph")
+            
+            try:
+                product = state.get("product", {})
+                blueprint = state.get("product_blueprint", {})
+                gaps = state.get("identified_gaps", {})
+                
+                # Skip if no product or blueprint
+                if not product or not blueprint:
+                    return state
+                
+                # Enhance blueprint with knowledge graph
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    enhanced_blueprint = loop.run_until_complete(
+                        generate_enhanced_blueprint_with_kg(product, gaps)
+                    )
+                    
+                    # Replace blueprint with enhanced blueprint
+                    state["product_blueprint"] = enhanced_blueprint
+                    state["knowledge_graph_enhanced_blueprint"] = True
+                finally:
+                    loop.close()
+                
+                return state
+            except Exception as e:
+                self.logger.error(f"Error enhancing blueprint with knowledge graph: {e}")
+                # Return original state if enhancement fails
+                return state
         
         # Build the sequential workflow using .pipe() method to chain steps
         workflow = (
             RunnableLambda(self._normalize_input)
             .pipe(market_discovery_node)
+            .pipe(RunnableLambda(enrich_market_discovery))  # Enhance products with knowledge graph
             .pipe(gap_analysis_node)
             .pipe(product_blueprint_node)
+            .pipe(RunnableLambda(enhance_blueprint))  # Enhance blueprint with knowledge graph
             .pipe(design_node)
             .pipe(RunnableLambda(design_router))
             .pipe(llm_node)
@@ -180,8 +258,9 @@ class SaasCloneGraph:
                     if run_id and agent_states and run_id in agent_states:
                         # Map agents to progress percentages
                         agent_progress = {
-                            "Market Discovery Agent": 10,
-                            "Gap Analysis Agent": 20,
+                            "Market Discovery Agent": 8,
+                            "Knowledge Graph Agent": 15,
+                            "Gap Analysis Agent": 22,
                             "Product Blueprint Agent": 30,
                             "Design Agent": 40,
                             "Frontend Agent": 50,

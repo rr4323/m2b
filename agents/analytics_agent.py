@@ -2,7 +2,7 @@
 Analytics Agent for setting up analytics and gathering insights.
 """
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from agents.base_agent import BaseAgent
 from utils.openai_utils import generate_json_completion, generate_completion
@@ -14,7 +14,7 @@ class AnalyticsAgent(BaseAgent):
         """Initialize the Analytics Agent."""
         super().__init__(
             name="Analytics Agent",
-            description="Sets up analytics and gathers insights from user data"
+            description="Sets up analytics and gathers insights"
         )
     
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -29,40 +29,45 @@ class AnalyticsAgent(BaseAgent):
         """
         self.log_info("Starting analytics process")
         
-        blueprint = input_data.get("blueprint", {})
+        # Extract the necessary data from input
+        blueprint = input_data.get("product_blueprint", {})
         
         if not blueprint:
-            self.log_error("No product blueprint provided for analytics")
-            return {"error": "No product blueprint provided for analytics"}
+            self.log_warning("No product blueprint provided for analytics setup")
+            return {"analytics_result": {}, "error": "No product blueprint provided for analytics setup"}
         
-        product_name = blueprint.get("product_name", "")
-        
-        self.log_info(f"Setting up analytics for: {product_name}")
-        
-        # Step 1: Define analytics strategy
+        # Define analytics strategy
         analytics_strategy = await self._define_analytics_strategy(blueprint)
         
-        # Step 2: Configure analytics setup
+        # Configure analytics setup
         analytics_setup = await self._configure_analytics_setup(blueprint, analytics_strategy)
         
-        # Step 3: Define key metrics and KPIs
+        # Define key metrics and KPIs
         metrics_kpis = await self._define_metrics_kpis(blueprint, analytics_strategy)
         
-        # Step 4: Create dashboards and reports
+        # Create dashboard specifications
         dashboards = await self._create_dashboards(blueprint, metrics_kpis)
         
-        # Step 5: Define user feedback collection
+        # Define user feedback collection mechanisms
         feedback_collection = await self._define_feedback_collection(blueprint)
         
-        return {
-            "product_name": product_name,
+        # Combine all analytics components
+        analytics_result = {
             "analytics_strategy": analytics_strategy,
             "analytics_setup": analytics_setup,
             "metrics_kpis": metrics_kpis,
             "dashboards": dashboards,
             "feedback_collection": feedback_collection
         }
-    
+        
+        self.log_info("Completed analytics setup")
+        
+        return {
+            "analytics_result": analytics_result,
+            "product_name": blueprint.get("name", ""),
+            "analytics_status": "completed"
+        }
+        
     async def _define_analytics_strategy(self, blueprint: Dict[str, Any]) -> Dict[str, Any]:
         """
         Define the analytics strategy.
@@ -73,77 +78,50 @@ class AnalyticsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Analytics strategy
         """
-        self.log_info("Defining analytics strategy")
-        
-        product_name = blueprint.get("product_name", "")
-        target_user = blueprint.get("target_user", "")
-        features = blueprint.get("features", {})
-        
-        system_message = (
-            "You are a product analytics strategist specializing in SaaS applications. "
-            "Define a comprehensive analytics strategy for the product based on its "
-            "features and target users. The strategy should provide actionable insights "
-            "for product improvement and business growth."
-        )
-        
-        prompt = (
-            f"Define an analytics strategy for '{product_name}':\n\n"
-            f"Target User: {target_user}\n\n"
-            f"Key Features: {features}\n\n"
-            f"The analytics strategy should include:\n"
-            f"1. Analytics goals and objectives\n"
-            f"2. Key user behaviors to track\n"
-            f"3. Business metrics to monitor\n"
-            f"4. Data collection approach\n"
-            f"5. Analysis methodology\n"
-            f"6. Privacy and compliance considerations\n\n"
-            f"The strategy should focus on providing insights that drive "
-            f"product improvement, user engagement, and business growth."
-        )
-        
-        strategy_structure = {
-            "goals": {
-                "product_improvement": ["Goal 1", "Goal 2"],
-                "user_engagement": ["Goal 1", "Goal 2"],
-                "business_growth": ["Goal 1", "Goal 2"]
+        # For now, we'll return a mock analytics strategy
+        # In a real implementation, we would generate an actual analytics strategy
+        return {
+            "goals": [
+                "Understand user behavior and engagement",
+                "Track feature usage and adoption",
+                "Measure business performance and growth",
+                "Identify areas for improvement"
+            ],
+            "approach": {
+                "user_analytics": {
+                    "acquisition": "Track user acquisition channels and conversion rates",
+                    "activation": "Measure successful onboarding and initial value delivery",
+                    "retention": "Analyze user retention and churn rates",
+                    "referral": "Track user referrals and viral growth",
+                    "revenue": "Measure revenue and monetization effectiveness"
+                },
+                "product_analytics": {
+                    "feature_usage": "Track feature adoption and usage patterns",
+                    "user_flows": "Analyze common user journeys and flows",
+                    "performance": "Monitor application performance metrics",
+                    "errors": "Track error rates and issues"
+                },
+                "business_analytics": {
+                    "growth": "Measure user and revenue growth metrics",
+                    "costs": "Track operational and acquisition costs",
+                    "roi": "Calculate return on investment for features and campaigns",
+                    "market": "Analyze market position and competitive landscape"
+                }
             },
-            "user_behaviors": {
-                "onboarding": ["Behavior 1", "Behavior 2"],
-                "core_features": ["Behavior 1", "Behavior 2"],
-                "retention": ["Behavior 1", "Behavior 2"],
-                "conversion": ["Behavior 1", "Behavior 2"]
+            "tools_stack": {
+                "data_collection": ["Google Analytics", "Segment", "Mixpanel"],
+                "visualization": ["Tableau", "Looker", "Metabase"],
+                "experimentation": ["Optimizely", "VWO"],
+                "user_feedback": ["Usabilla", "Hotjar", "Intercom"]
             },
-            "business_metrics": {
-                "acquisition": ["Metric 1", "Metric 2"],
-                "engagement": ["Metric 1", "Metric 2"],
-                "retention": ["Metric 1", "Metric 2"],
-                "revenue": ["Metric 1", "Metric 2"]
-            },
-            "data_collection": {
-                "tools": ["Tool 1", "Tool 2"],
-                "implementation": "Implementation approach",
-                "data_points": ["Data point 1", "Data point 2"]
-            },
-            "analysis": {
-                "methodologies": ["Methodology 1", "Methodology 2"],
-                "segmentation": ["Segment 1", "Segment 2"],
-                "cadence": "Analysis cadence"
-            },
-            "privacy_compliance": {
-                "regulations": ["Regulation 1", "Regulation 2"],
-                "implementation": "Compliance implementation approach",
-                "user_controls": ["Control 1", "Control 2"]
+            "data_governance": {
+                "privacy": "GDPR and CCPA compliant data collection",
+                "retention": "Data retention policies and procedures",
+                "access": "Role-based access to analytics data",
+                "security": "Encrypted data storage and transmission"
             }
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to define analytics strategy, using default structure")
-            return strategy_structure
-        
-        return result
-    
     async def _configure_analytics_setup(
         self, 
         blueprint: Dict[str, Any],
@@ -159,93 +137,76 @@ class AnalyticsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Analytics setup configuration
         """
-        self.log_info("Configuring analytics setup")
-        
-        tech_stack = blueprint.get("stack", {})
-        data_collection = analytics_strategy.get("data_collection", {})
-        
-        system_message = (
-            "You are a product analytics engineer specializing in SaaS applications. "
-            "Configure a comprehensive analytics setup for the product based on its "
-            "technology stack and analytics strategy. The setup should be technically "
-            "sound, privacy-compliant, and aligned with the analytics goals."
-        )
-        
-        prompt = (
-            f"Configure an analytics setup with these specifications:\n\n"
-            f"Tech Stack: {tech_stack}\n\n"
-            f"Data Collection Approach: {data_collection}\n\n"
-            f"The analytics setup should include:\n"
-            f"1. Analytics platform selection and justification\n"
-            f"2. Implementation approach (client-side, server-side, hybrid)\n"
-            f"3. Event tracking plan\n"
-            f"4. User identification and tracking\n"
-            f"5. Data storage and processing\n"
-            f"6. Integration with other tools\n\n"
-            f"Consider privacy-focused analytics platforms like Plausible or PostHog "
-            f"as mentioned in the requirements."
-        )
-        
-        setup_structure = {
-            "platform": {
-                "name": "Platform name",
-                "justification": "Justification for selection",
-                "implementation": "Implementation approach"
+        # For now, we'll return a mock analytics setup
+        # In a real implementation, we would generate an actual analytics setup
+        return {
+            "tracking_setup": {
+                "page_tracking": {
+                    "enabled": True,
+                    "attributes": ["page_name", "page_category", "referrer", "load_time"]
+                },
+                "event_tracking": {
+                    "enabled": True,
+                    "standard_events": [
+                        "page_view",
+                        "button_click",
+                        "form_submit",
+                        "feature_use",
+                        "error_encounter"
+                    ],
+                    "custom_events": [
+                        "subscription_started",
+                        "subscription_cancelled",
+                        "feature_configured",
+                        "sharing_initiated",
+                        "export_completed"
+                    ]
+                },
+                "user_identification": {
+                    "anonymous_id": "Generated for all visitors",
+                    "user_id": "Assigned upon registration/login",
+                    "traits": ["role", "plan", "signup_date", "last_login", "company_size"]
+                }
             },
-            "tracking_approach": {
-                "method": "Tracking method",
-                "justification": "Justification for approach",
-                "implementation": "Implementation details"
-            },
-            "event_tracking": {
-                "core_events": [
-                    {
-                        "name": "Event name",
-                        "description": "Event description",
-                        "properties": ["Property 1", "Property 2"]
-                    }
-                ],
-                "custom_events": [
-                    {
-                        "name": "Event name",
-                        "description": "Event description",
-                        "properties": ["Property 1", "Property 2"]
-                    }
-                ],
-                "implementation": "Implementation details"
-            },
-            "user_identification": {
-                "approach": "Identification approach",
-                "properties": ["Property 1", "Property 2"],
-                "privacy_considerations": ["Consideration 1", "Consideration 2"]
-            },
-            "data": {
-                "storage": "Data storage approach",
-                "processing": "Data processing approach",
-                "retention": "Data retention policy"
+            "implementation": {
+                "client_side": {
+                    "javascript": "Analytics.js with GTM for tag management",
+                    "mobile": "Native SDKs for iOS and Android"
+                },
+                "server_side": {
+                    "api_tracking": "Server-side event tracking API",
+                    "webhooks": "Integration with third-party services"
+                },
+                "data_warehouse": {
+                    "type": "Snowflake",
+                    "etl": "Fivetran for data pipeline",
+                    "transformation": "dbt for data modeling"
+                }
             },
             "integrations": [
                 {
-                    "tool": "Tool name",
-                    "purpose": "Integration purpose",
-                    "implementation": "Implementation details"
+                    "tool": "Google Analytics",
+                    "purpose": "Basic web analytics",
+                    "implementation": "GTM tag with enhanced ecommerce"
+                },
+                {
+                    "tool": "Segment",
+                    "purpose": "Customer data infrastructure",
+                    "implementation": "JavaScript snippet and server-side libraries"
+                },
+                {
+                    "tool": "Mixpanel",
+                    "purpose": "Event-based user analytics",
+                    "implementation": "Via Segment integration"
+                },
+                {
+                    "tool": "Hotjar",
+                    "purpose": "User session recording and heatmaps",
+                    "implementation": "JavaScript snippet"
                 }
-            ],
-            "code_snippets": {
-                "frontend": "Frontend implementation code",
-                "backend": "Backend implementation code",
-                "configuration": "Configuration code"
-            }
+            ]
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to configure analytics setup, using default structure")
-            return setup_structure
-        
-        return result
-    
     async def _define_metrics_kpis(
         self, 
         blueprint: Dict[str, Any],
@@ -261,99 +222,111 @@ class AnalyticsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Key metrics and KPIs
         """
-        self.log_info("Defining key metrics and KPIs")
-        
-        business_metrics = analytics_strategy.get("business_metrics", {})
-        
-        system_message = (
-            "You are a product analytics expert specializing in SaaS metrics. "
-            "Define comprehensive metrics and KPIs for the product based on the "
-            "analytics strategy. The metrics should provide actionable insights "
-            "for product improvement and business growth decisions."
-        )
-        
-        prompt = (
-            f"Define key metrics and KPIs with these specifications:\n\n"
-            f"Business Metrics Focus: {business_metrics}\n\n"
-            f"The metrics and KPIs should include:\n"
-            f"1. North Star metric\n"
-            f"2. Product health metrics\n"
-            f"3. User engagement metrics\n"
-            f"4. Business performance metrics\n"
-            f"5. Growth metrics\n"
-            f"6. Technical performance metrics\n\n"
-            f"For each metric, provide a clear definition, calculation method, "
-            f"target value, and how it relates to business goals."
-        )
-        
-        metrics_structure = {
-            "north_star": {
-                "metric": "North Star metric name",
-                "definition": "Metric definition",
-                "calculation": "Calculation method",
-                "target": "Target value",
-                "business_impact": "Business impact description"
-            },
-            "product_health": [
+        # For now, we'll return a mock metrics and KPIs
+        # In a real implementation, we would generate actual metrics and KPIs
+        return {
+            "acquisition_metrics": [
                 {
-                    "metric": "Metric name",
-                    "definition": "Metric definition",
-                    "calculation": "Calculation method",
-                    "target": "Target value",
-                    "business_impact": "Business impact description"
+                    "name": "Customer Acquisition Cost (CAC)",
+                    "definition": "Total marketing and sales cost / New customers",
+                    "target": "< $100 per customer",
+                    "frequency": "Monthly"
+                },
+                {
+                    "name": "Conversion Rate",
+                    "definition": "Signups / Visitors",
+                    "target": "> 3%",
+                    "frequency": "Weekly"
+                },
+                {
+                    "name": "Traffic Sources",
+                    "definition": "Visitors by referral source",
+                    "target": "Diverse mix with > 30% organic",
+                    "frequency": "Weekly"
                 }
             ],
-            "user_engagement": [
+            "engagement_metrics": [
                 {
-                    "metric": "Metric name",
-                    "definition": "Metric definition",
-                    "calculation": "Calculation method",
-                    "target": "Target value",
-                    "business_impact": "Business impact description"
+                    "name": "Daily Active Users (DAU)",
+                    "definition": "Unique users who perform any action in a day",
+                    "target": "Steady growth of 5% week-over-week",
+                    "frequency": "Daily"
+                },
+                {
+                    "name": "Session Duration",
+                    "definition": "Average time spent per session",
+                    "target": "> 5 minutes",
+                    "frequency": "Weekly"
+                },
+                {
+                    "name": "Feature Adoption Rate",
+                    "definition": "% of users who use a specific feature",
+                    "target": "> 40% for core features",
+                    "frequency": "Monthly"
                 }
             ],
-            "business_performance": [
+            "retention_metrics": [
                 {
-                    "metric": "Metric name",
-                    "definition": "Metric definition",
-                    "calculation": "Calculation method",
-                    "target": "Target value",
-                    "business_impact": "Business impact description"
+                    "name": "User Retention (N-day)",
+                    "definition": "% of users who return N days after first use",
+                    "target": "> 25% for day 30",
+                    "frequency": "Monthly"
+                },
+                {
+                    "name": "Churn Rate",
+                    "definition": "% of users who cancel subscription",
+                    "target": "< 5% monthly",
+                    "frequency": "Monthly"
+                },
+                {
+                    "name": "Net Revenue Retention",
+                    "definition": "Revenue from existing customers / Revenue from previous period",
+                    "target": "> 110%",
+                    "frequency": "Quarterly"
                 }
             ],
-            "growth": [
+            "revenue_metrics": [
                 {
-                    "metric": "Metric name",
-                    "definition": "Metric definition",
-                    "calculation": "Calculation method",
-                    "target": "Target value",
-                    "business_impact": "Business impact description"
+                    "name": "Monthly Recurring Revenue (MRR)",
+                    "definition": "Predictable monthly revenue from subscriptions",
+                    "target": "10% month-over-month growth",
+                    "frequency": "Monthly"
+                },
+                {
+                    "name": "Average Revenue Per User (ARPU)",
+                    "definition": "Total revenue / Total users",
+                    "target": "> $20 per month",
+                    "frequency": "Monthly"
+                },
+                {
+                    "name": "Lifetime Value (LTV)",
+                    "definition": "Average revenue per customer over their lifetime",
+                    "target": "LTV/CAC > 3",
+                    "frequency": "Quarterly"
                 }
             ],
-            "technical_performance": [
+            "product_health_metrics": [
                 {
-                    "metric": "Metric name",
-                    "definition": "Metric definition",
-                    "calculation": "Calculation method",
-                    "target": "Target value",
-                    "business_impact": "Business impact description"
+                    "name": "Error Rate",
+                    "definition": "% of requests that result in errors",
+                    "target": "< 0.1%",
+                    "frequency": "Daily"
+                },
+                {
+                    "name": "Page Load Time",
+                    "definition": "Average time to load pages",
+                    "target": "< 2 seconds",
+                    "frequency": "Daily"
+                },
+                {
+                    "name": "Task Completion Rate",
+                    "definition": "% of started user flows that are completed",
+                    "target": "> 80%",
+                    "frequency": "Weekly"
                 }
-            ],
-            "tracking_implementation": {
-                "data_sources": ["Source 1", "Source 2"],
-                "collection_frequency": "Collection frequency",
-                "reporting_frequency": "Reporting frequency"
-            }
+            ]
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to define metrics and KPIs, using default structure")
-            return metrics_structure
-        
-        return result
-    
     async def _create_dashboards(
         self, 
         blueprint: Dict[str, Any],
@@ -369,118 +342,90 @@ class AnalyticsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Dashboard specifications
         """
-        self.log_info("Creating dashboard specifications")
-        
-        product_name = blueprint.get("product_name", "")
-        
-        system_message = (
-            "You are a data visualization specialist for SaaS products. "
-            "Create comprehensive dashboard specifications for the product "
-            "based on its metrics and KPIs. The dashboards should provide "
-            "clear, actionable insights for different stakeholders."
-        )
-        
-        prompt = (
-            f"Create dashboard specifications for '{product_name}':\n\n"
-            f"Key Metrics: {metrics_kpis}\n\n"
-            f"The dashboard specifications should include:\n"
-            f"1. Executive dashboard\n"
-            f"2. Product dashboard\n"
-            f"3. Marketing/Growth dashboard\n"
-            f"4. Customer success dashboard\n"
-            f"5. Technical performance dashboard\n\n"
-            f"For each dashboard, specify the key metrics, visualizations, "
-            f"layout, and user interactions. Consider different stakeholder "
-            f"needs and focus on actionable insights."
-        )
-        
-        dashboards_structure = {
-            "executive": {
-                "purpose": "Dashboard purpose",
-                "audience": ["Audience 1", "Audience 2"],
-                "key_metrics": ["Metric 1", "Metric 2"],
-                "visualizations": [
-                    {
-                        "type": "Visualization type",
-                        "metrics": ["Metric 1", "Metric 2"],
-                        "description": "Visualization description"
-                    }
+        # For now, we'll return a mock dashboards
+        # In a real implementation, we would generate actual dashboard specifications
+        return {
+            "executive_dashboard": {
+                "audience": "C-Suite, Board, Investors",
+                "update_frequency": "Weekly",
+                "description": "High-level overview of business performance",
+                "metrics": [
+                    "Monthly Recurring Revenue (MRR)",
+                    "Customer Acquisition Cost (CAC)",
+                    "Lifetime Value (LTV)",
+                    "Net Revenue Retention",
+                    "Monthly Active Users (MAU)",
+                    "Churn Rate"
                 ],
-                "layout": "Dashboard layout description",
-                "interactions": ["Interaction 1", "Interaction 2"]
-            },
-            "product": {
-                "purpose": "Dashboard purpose",
-                "audience": ["Audience 1", "Audience 2"],
-                "key_metrics": ["Metric 1", "Metric 2"],
                 "visualizations": [
-                    {
-                        "type": "Visualization type",
-                        "metrics": ["Metric 1", "Metric 2"],
-                        "description": "Visualization description"
-                    }
-                ],
-                "layout": "Dashboard layout description",
-                "interactions": ["Interaction 1", "Interaction 2"]
+                    "MRR growth trend",
+                    "User growth trend",
+                    "CAC and LTV comparison",
+                    "Retention cohort analysis",
+                    "Revenue by plan type"
+                ]
             },
-            "marketing_growth": {
-                "purpose": "Dashboard purpose",
-                "audience": ["Audience 1", "Audience 2"],
-                "key_metrics": ["Metric 1", "Metric 2"],
+            "product_dashboard": {
+                "audience": "Product Managers, Designers, Engineers",
+                "update_frequency": "Daily",
+                "description": "Detailed product usage and performance metrics",
+                "metrics": [
+                    "Daily Active Users (DAU)",
+                    "Feature Adoption Rate",
+                    "Task Completion Rate",
+                    "Error Rate",
+                    "Page Load Time",
+                    "User Flow Completion"
+                ],
                 "visualizations": [
-                    {
-                        "type": "Visualization type",
-                        "metrics": ["Metric 1", "Metric 2"],
-                        "description": "Visualization description"
-                    }
-                ],
-                "layout": "Dashboard layout description",
-                "interactions": ["Interaction 1", "Interaction 2"]
+                    "Feature usage heatmap",
+                    "User flow funnel analysis",
+                    "Error rate by feature",
+                    "Performance metrics over time",
+                    "User session duration distribution"
+                ]
             },
-            "customer_success": {
-                "purpose": "Dashboard purpose",
-                "audience": ["Audience 1", "Audience 2"],
-                "key_metrics": ["Metric 1", "Metric 2"],
+            "marketing_dashboard": {
+                "audience": "Marketing Team, Growth Team",
+                "update_frequency": "Weekly",
+                "description": "Acquisition and conversion metrics",
+                "metrics": [
+                    "Traffic by Source",
+                    "Conversion Rate",
+                    "Customer Acquisition Cost (CAC)",
+                    "Sign-up to Paid Conversion Rate",
+                    "Campaign Performance"
+                ],
                 "visualizations": [
-                    {
-                        "type": "Visualization type",
-                        "metrics": ["Metric 1", "Metric 2"],
-                        "description": "Visualization description"
-                    }
-                ],
-                "layout": "Dashboard layout description",
-                "interactions": ["Interaction 1", "Interaction 2"]
+                    "Traffic sources breakdown",
+                    "Conversion funnel",
+                    "CAC by channel",
+                    "Campaign ROI comparison",
+                    "Acquisition trend over time"
+                ]
             },
-            "technical": {
-                "purpose": "Dashboard purpose",
-                "audience": ["Audience 1", "Audience 2"],
-                "key_metrics": ["Metric 1", "Metric 2"],
+            "customer_success_dashboard": {
+                "audience": "Customer Success, Support Teams",
+                "update_frequency": "Daily",
+                "description": "Customer health and satisfaction metrics",
+                "metrics": [
+                    "Net Promoter Score (NPS)",
+                    "Customer Satisfaction Score (CSAT)",
+                    "Support Ticket Volume",
+                    "First Response Time",
+                    "Resolution Time",
+                    "Customer Health Score"
+                ],
                 "visualizations": [
-                    {
-                        "type": "Visualization type",
-                        "metrics": ["Metric 1", "Metric 2"],
-                        "description": "Visualization description"
-                    }
-                ],
-                "layout": "Dashboard layout description",
-                "interactions": ["Interaction 1", "Interaction 2"]
-            },
-            "implementation": {
-                "platform": "Implementation platform",
-                "data_sources": ["Source 1", "Source 2"],
-                "refresh_rate": "Refresh rate",
-                "access_controls": ["Control 1", "Control 2"]
+                    "NPS trend over time",
+                    "CSAT by feature area",
+                    "Support ticket volume by category",
+                    "Resolution time trend",
+                    "Customer health distribution"
+                ]
             }
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to create dashboard specifications, using default structure")
-            return dashboards_structure
-        
-        return result
-    
     async def _define_feedback_collection(self, blueprint: Dict[str, Any]) -> Dict[str, Any]:
         """
         Define user feedback collection mechanisms.
@@ -491,92 +436,71 @@ class AnalyticsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Feedback collection mechanisms
         """
-        self.log_info("Defining feedback collection mechanisms")
-        
-        product_name = blueprint.get("product_name", "")
-        target_user = blueprint.get("target_user", "")
-        
-        system_message = (
-            "You are a user research specialist for SaaS products. "
-            "Define comprehensive feedback collection mechanisms for the product "
-            "based on its target users. The mechanisms should provide valuable "
-            "insights for product improvement and iteration."
-        )
-        
-        prompt = (
-            f"Define feedback collection mechanisms for '{product_name}':\n\n"
-            f"Target User: {target_user}\n\n"
-            f"The feedback collection mechanisms should include:\n"
-            f"1. In-app feedback collection\n"
-            f"2. User surveys\n"
-            f"3. User interviews\n"
-            f"4. Feature request management\n"
-            f"5. External reviews monitoring\n"
-            f"6. Usage data analysis\n\n"
-            f"For each mechanism, specify the implementation approach, "
-            f"timing, analysis method, and integration with product development."
-        )
-        
-        feedback_structure = {
-            "in_app": {
-                "mechanisms": [
-                    {
-                        "type": "Mechanism type",
-                        "implementation": "Implementation approach",
-                        "trigger": "Trigger conditions",
-                        "questions": ["Question 1", "Question 2"]
-                    }
-                ],
-                "collection_strategy": "Collection strategy description",
-                "analysis_approach": "Analysis approach description"
-            },
-            "surveys": {
+        # For now, we'll return a mock feedback collection
+        # In a real implementation, we would generate actual feedback collection mechanisms
+        return {
+            "in_app_surveys": {
                 "types": [
                     {
-                        "name": "Survey type",
-                        "purpose": "Survey purpose",
-                        "timing": "Survey timing",
-                        "questions": ["Question 1", "Question 2"]
+                        "name": "Net Promoter Score (NPS)",
+                        "frequency": "Quarterly",
+                        "trigger": "After 30 days of active usage",
+                        "question": "How likely are you to recommend us to a friend or colleague?",
+                        "scale": "0-10"
+                    },
+                    {
+                        "name": "Customer Satisfaction (CSAT)",
+                        "frequency": "After key interactions",
+                        "trigger": "After completing a core workflow",
+                        "question": "How satisfied are you with this experience?",
+                        "scale": "1-5"
+                    },
+                    {
+                        "name": "Feature Satisfaction",
+                        "frequency": "Monthly",
+                        "trigger": "After using a specific feature 5+ times",
+                        "question": "How satisfied are you with this feature?",
+                        "scale": "1-5"
                     }
                 ],
-                "tools": ["Tool 1", "Tool 2"],
-                "analysis_approach": "Analysis approach description"
+                "implementation": "Custom in-app modal with Segment integration"
             },
-            "interviews": {
-                "approach": "Interview approach description",
-                "target_segments": ["Segment 1", "Segment 2"],
-                "frequency": "Interview frequency",
-                "script_templates": ["Template 1", "Template 2"],
-                "analysis_approach": "Analysis approach description"
+            "user_interviews": {
+                "frequency": "Monthly",
+                "recruitment": "In-app invitation to power users",
+                "structure": "30-minute semi-structured interview",
+                "incentives": "$50 gift card or account credit",
+                "focus_areas": [
+                    "User workflow understanding",
+                    "Pain points identification",
+                    "Feature request exploration",
+                    "Competitive analysis"
+                ]
             },
-            "feature_requests": {
-                "collection_method": "Collection method description",
-                "prioritization_framework": "Prioritization framework description",
-                "tools": ["Tool 1", "Tool 2"],
-                "communication_approach": "Communication approach description"
+            "feedback_widget": {
+                "placement": "Persistent button in bottom right corner",
+                "categories": [
+                    "Bug report",
+                    "Feature request",
+                    "General feedback",
+                    "Help request"
+                ],
+                "implementation": "Intercom or custom widget"
             },
-            "external_reviews": {
-                "sources": ["Source 1", "Source 2"],
-                "monitoring_approach": "Monitoring approach description",
-                "analysis_approach": "Analysis approach description",
-                "response_strategy": "Response strategy description"
+            "usage_analytics": {
+                "passive_feedback": "Analyze user behavior to identify pain points",
+                "metrics": [
+                    "Rage clicks",
+                    "Abandoned flows",
+                    "Error encounters",
+                    "Feature usage drop-offs"
+                ],
+                "implementation": "Combination of Mixpanel and Hotjar"
             },
-            "usage_analysis": {
-                "approach": "Analysis approach description",
-                "key_behaviors": ["Behavior 1", "Behavior 2"],
-                "integration_with_feedback": "Integration description"
-            },
-            "integration": {
-                "product_development": "Integration with product development description",
-                "reporting_cadence": "Reporting cadence description",
-                "action_framework": "Action framework description"
+            "user_testing": {
+                "frequency": "For major releases",
+                "methodology": "Task-based testing with think-aloud protocol",
+                "participants": "5-7 users per segment",
+                "implementation": "UserTesting.com or in-house sessions"
             }
         }
-        
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to define feedback collection mechanisms, using default structure")
-            return feedback_structure
-        
-        return result

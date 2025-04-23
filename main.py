@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Main entry point for the Multi-Agent SaaS Cloner & Enhancer system.
 This coordinates the workflow for discovering, analyzing, and enhancing SaaS applications.
@@ -6,75 +5,167 @@ This coordinates the workflow for discovering, analyzing, and enhancing SaaS app
 import asyncio
 import logging
 import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict, Any
 
-from api.app import app as api_app
-from workflows.saas_cloner_graph import SaasCloneGraph
-from utils.openai_utils import check_api_key
-from config import setup_logging
+import fastapi
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# Import agent modules
+from agents.market_discovery_agent import MarketDiscoveryAgent
+from agents.gap_analysis_agent import GapAnalysisAgent
+from agents.product_blueprint_agent import ProductBlueprintAgent
+from agents.design_agent import DesignAgent
+from agents.frontend_agent import FrontendAgent
+from agents.backend_agent import BackendAgent
+from agents.devops_agent import DevOpsAgent
+from agents.deploy_agent import DeployAgent
+from agents.analytics_agent import AnalyticsAgent
+
+# Import utilities
+from utils.openai_utils import generate_completion
+import config
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 def setup_app():
     """Setup the API application with middleware"""
-    api_app.add_middleware(
+    app = fastapi.FastAPI(
+        title="SaaS Cloner API",
+        description="API for the Multi-Agent SaaS Cloner & Enhancer system",
+        version="0.1.0"
+    )
+    
+    # Configure CORS
+    app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    return api_app
+    
+    return app
 
 async def run_test_workflow():
     """Run a test workflow"""
-    # Initialize the workflow
-    saas_graph = SaasCloneGraph()
+    # Initialize the agents
+    market_discovery_agent = MarketDiscoveryAgent()
+    gap_analysis_agent = GapAnalysisAgent()
+    product_blueprint_agent = ProductBlueprintAgent()
+    design_agent = DesignAgent()
+    frontend_agent = FrontendAgent()
+    backend_agent = BackendAgent()
+    devops_agent = DevOpsAgent()
+    deploy_agent = DeployAgent()
+    analytics_agent = AnalyticsAgent()
     
-    # Run a test workflow with a simple category
-    logging.info("Initializing test workflow")
-    try:
-        result = await saas_graph.run("productivity")
-        logging.info(f"Workflow test completed successfully")
-        return result
-    except Exception as e:
-        logging.error(f"Error running test workflow: {e}", exc_info=True)
-        return {"error": str(e)}
+    # Start with market discovery
+    logger.info("Starting the workflow")
+    
+    market_data = await market_discovery_agent.run({"category": "Productivity"})
+    logger.info(f"Market discovery completed, found {len(market_data.get('products', []))} products")
+    
+    # Perform gap analysis
+    gap_analysis = await gap_analysis_agent.run(market_data)
+    logger.info("Gap analysis completed")
+    
+    # Combine market data and gap analysis for product blueprint
+    blueprint_input = {
+        "products": market_data.get("products", []),
+        "identified_gaps": gap_analysis.get("identified_gaps", {}),
+        "category": market_data.get("category", "")
+    }
+    
+    # Generate product blueprint
+    blueprint_result = await product_blueprint_agent.run(blueprint_input)
+    logger.info(f"Product blueprint generated for: {blueprint_result.get('product_blueprint', {}).get('name', 'Unknown')}")
+    
+    # Generate design based on blueprint
+    design_result = await design_agent.run(blueprint_result)
+    logger.info("Design completed")
+    
+    # Create frontend implementation
+    frontend_input = {
+        **blueprint_result,
+        "design": design_result.get("design", {}),
+        "_agent_context": "frontend"
+    }
+    frontend_result = await frontend_agent.run(frontend_input)
+    logger.info("Frontend implementation completed")
+    
+    # Create backend implementation
+    backend_input = {
+        **blueprint_result,
+        "_agent_context": "backend"
+    }
+    backend_result = await backend_agent.run(backend_input)
+    logger.info("Backend implementation completed")
+    
+    # Create DevOps setup
+    devops_input = {
+        **blueprint_result,
+        "frontend_result": frontend_result.get("frontend_result", {}),
+        "backend_result": backend_result.get("backend_result", {})
+    }
+    devops_result = await devops_agent.run(devops_input)
+    logger.info("DevOps setup completed")
+    
+    # Create deployment plan
+    deploy_input = {
+        **blueprint_result,
+        "devops_result": devops_result.get("devops_result", {}),
+        "test_results": {}  # Would have test results from testing phase
+    }
+    deployment_result = await deploy_agent.run(deploy_input)
+    logger.info("Deployment planning completed")
+    
+    # Create analytics setup
+    analytics_input = {
+        **blueprint_result
+    }
+    analytics_result = await analytics_agent.run(analytics_input)
+    logger.info("Analytics setup completed")
+    
+    # Combine all results
+    final_result = {
+        "market_data": market_data,
+        "gap_analysis": gap_analysis,
+        "product_blueprint": blueprint_result.get("product_blueprint", {}),
+        "design": design_result.get("design", {}),
+        "frontend": frontend_result.get("frontend_result", {}),
+        "backend": backend_result.get("backend_result", {}),
+        "devops": devops_result.get("devops_result", {}),
+        "deployment": deployment_result.get("deployment_result", {}),
+        "analytics": analytics_result.get("analytics_result", {})
+    }
+    
+    logger.info("Workflow completed successfully")
+    return final_result
 
 def initialize_database():
     """Initialize the database"""
-    from models.database import create_tables
-    
-    try:
-        logging.info("Initializing database...")
-        create_tables()
-        logging.info("Database initialization complete.")
-    except Exception as e:
-        logging.error(f"Error initializing database: {e}", exc_info=True)
-        raise
+    # This would set up the database tables and initial data
+    pass
 
 def main():
     """Main entry point for the SaaS Cloner workflow"""
-    setup_logging()
-    logging.info("Starting SaaS Cloner system")
-    
-    # Check if OpenAI API key is available
-    if not check_api_key():
-        logging.error("OpenAI API key not found! Set the OPENAI_API_KEY environment variable.")
-        return
+    # Check if OpenAI API key is set
+    if not os.environ.get("OPENAI_API_KEY"):
+        logger.warning("OPENAI_API_KEY environment variable not set. Some functionality may be limited.")
     
     # Initialize the database
     initialize_database()
     
-    # Run test workflow in a separate event loop
+    # Run the test workflow
     asyncio.run(run_test_workflow())
     
-    # Start the API server (this should be in the main thread)
-    logging.info("Starting API server")
-    import uvicorn
-    app = setup_app()
-    
-    # Run the server
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    logger.info("SaaS Cloner workflow completed")
 
 if __name__ == "__main__":
     main()

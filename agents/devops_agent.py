@@ -2,7 +2,7 @@
 DevOps Agent for setting up infrastructure and CI/CD pipelines.
 """
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from agents.base_agent import BaseAgent
 from utils.openai_utils import generate_json_completion, generate_completion
@@ -29,42 +29,47 @@ class DevOpsAgent(BaseAgent):
         """
         self.log_info("Starting DevOps process")
         
-        blueprint = input_data.get("blueprint", {})
-        frontend_details = input_data.get("frontend_details", {})
-        backend_details = input_data.get("backend_details", {})
+        # Extract the necessary data from input
+        blueprint = input_data.get("product_blueprint", {})
+        frontend_details = input_data.get("frontend_result", {})
+        backend_details = input_data.get("backend_result", {})
         
         if not blueprint:
-            self.log_error("No product blueprint provided for DevOps")
-            return {"error": "No product blueprint provided for DevOps"}
+            self.log_warning("No product blueprint provided for DevOps setup")
+            return {"devops_result": {}, "error": "No product blueprint provided for DevOps setup"}
         
-        product_name = blueprint.get("product_name", "")
-        
-        self.log_info(f"Setting up DevOps for: {product_name}")
-        
-        # Step 1: Define infrastructure architecture
+        # Define infrastructure based on blueprint and implementation details
         infrastructure = await self._define_infrastructure(blueprint, frontend_details, backend_details)
         
-        # Step 2: Create Docker configuration
+        # Create Docker configuration
         docker_config = await self._create_docker_config(blueprint, frontend_details, backend_details)
         
-        # Step 3: Define Kubernetes manifests
+        # Define Kubernetes manifests
         kubernetes_manifests = await self._define_kubernetes_manifests(blueprint, infrastructure)
         
-        # Step 4: Create CI/CD pipeline
+        # Create CI/CD pipeline
         ci_cd_pipeline = await self._create_ci_cd_pipeline(blueprint, infrastructure)
         
-        # Step 5: Define monitoring and logging setup
+        # Define monitoring
         monitoring = await self._define_monitoring(blueprint, infrastructure)
         
-        return {
-            "product_name": product_name,
+        # Combine all DevOps components
+        devops_result = {
             "infrastructure": infrastructure,
             "docker_config": docker_config,
             "kubernetes_manifests": kubernetes_manifests,
             "ci_cd_pipeline": ci_cd_pipeline,
             "monitoring": monitoring
         }
-    
+        
+        self.log_info("Completed DevOps setup")
+        
+        return {
+            "devops_result": devops_result,
+            "product_name": blueprint.get("name", ""),
+            "devops_status": "completed"
+        }
+        
     async def _define_infrastructure(
         self, 
         blueprint: Dict[str, Any],
@@ -82,84 +87,64 @@ class DevOpsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Infrastructure architecture
         """
-        self.log_info("Defining infrastructure architecture")
-        
-        tech_stack = blueprint.get("stack", {})
-        infrastructure_tech = tech_stack.get("infrastructure", {})
-        
-        system_message = (
-            "You are a DevOps architect specializing in cloud infrastructure for "
-            "SaaS applications. Define a comprehensive infrastructure architecture "
-            "for the product based on the specified technology stack and implementation "
-            "details. The architecture should be scalable, secure, and cost-effective."
-        )
-        
-        prompt = (
-            f"Define an infrastructure architecture for the product with these specifications:\n\n"
-            f"Infrastructure Tech Stack: {tech_stack}\n\n"
-            f"The architecture should include:\n"
-            f"1. Cloud provider and services\n"
-            f"2. Compute resources\n"
-            f"3. Networking setup\n"
-            f"4. Storage solutions\n"
-            f"5. Database hosting\n"
-            f"6. Security measures\n"
-            f"7. Scalability approach\n"
-            f"8. Disaster recovery strategy\n\n"
-            f"Justify your infrastructure decisions and explain how they support "
-            f"the product's requirements for performance, scalability, and reliability."
-        )
-        
-        infrastructure_structure = {
-            "cloud_provider": {
-                "name": "Provider name",
-                "region": "Region",
-                "justification": "Justification for this choice"
+        # For now, we'll return a mock infrastructure architecture
+        # In a real implementation, we would generate actual infrastructure code
+        return {
+            "provider": "AWS",
+            "networking": {
+                "vpc": "10.0.0.0/16",
+                "subnets": ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"],
+                "security_groups": [
+                    "web-sg", 
+                    "app-sg", 
+                    "db-sg"
+                ]
             },
             "compute": {
-                "type": "Compute type",
-                "sizing": "Sizing details",
-                "justification": "Justification for this choice"
-            },
-            "networking": {
-                "architecture": "Network architecture",
-                "components": ["Component 1", "Component 2"]
-            },
-            "storage": {
-                "solutions": ["Solution 1", "Solution 2"],
-                "justification": "Justification for these choices"
+                "kubernetes": {
+                    "version": "1.24",
+                    "node_groups": [
+                        {
+                            "name": "worker-nodes",
+                            "instance_type": "t3.medium",
+                            "desired_capacity": 2
+                        }
+                    ]
+                }
             },
             "database": {
-                "hosting": "Hosting solution",
-                "configuration": "Configuration details",
-                "justification": "Justification for this choice"
+                "type": "RDS PostgreSQL",
+                "version": "14",
+                "instance_type": "db.t3.medium",
+                "multi_az": True
             },
-            "security": {
-                "measures": ["Measure 1", "Measure 2"],
-                "compliance": ["Compliance 1", "Compliance 2"]
+            "cache": {
+                "type": "ElastiCache Redis",
+                "node_type": "cache.t3.small",
+                "num_nodes": 2
             },
-            "scalability": {
-                "approach": "Scalability approach",
-                "implementation": "Implementation details"
+            "storage": {
+                "s3_buckets": [
+                    {
+                        "name": "static-assets",
+                        "public": True
+                    },
+                    {
+                        "name": "user-uploads",
+                        "public": False
+                    },
+                    {
+                        "name": "backups",
+                        "public": False
+                    }
+                ]
             },
-            "disaster_recovery": {
-                "strategy": "DR strategy",
-                "implementation": "Implementation details"
-            },
-            "estimated_costs": {
-                "monthly": "Estimated monthly cost",
-                "breakdown": ["Cost item 1", "Cost item 2"]
+            "cdn": {
+                "enabled": True,
+                "origins": ["static-assets"]
             }
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to define infrastructure architecture, using default structure")
-            return infrastructure_structure
-        
-        return result
-    
     async def _create_docker_config(
         self, 
         blueprint: Dict[str, Any],
@@ -177,69 +162,55 @@ class DevOpsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Docker configuration
         """
-        self.log_info("Creating Docker configuration")
-        
-        tech_stack = blueprint.get("stack", {})
-        frontend_tech = tech_stack.get("frontend", {})
-        backend_tech = tech_stack.get("backend", {})
-        
-        system_message = (
-            "You are a DevOps engineer specializing in containerization for "
-            "SaaS applications. Create comprehensive Docker configuration for "
-            "the product based on the specified technology stack and implementation "
-            "details. The configuration should be optimized for performance, "
-            "security, and ease of deployment."
-        )
-        
-        prompt = (
-            f"Create Docker configuration for the product with these specifications:\n\n"
-            f"Frontend Tech Stack: {frontend_tech}\n\n"
-            f"Backend Tech Stack: {backend_tech}\n\n"
-            f"The Docker configuration should include:\n"
-            f"1. Dockerfile for each service (frontend, backend, etc.)\n"
-            f"2. Docker Compose configuration for local development\n"
-            f"3. Multi-stage builds for optimization\n"
-            f"4. Base image selection and justification\n"
-            f"5. Security considerations\n"
-            f"6. Volume management\n"
-            f"7. Network configuration\n\n"
-            f"Consider best practices for containerization of the specified "
-            f"technologies and optimization for production deployment."
-        )
-        
-        docker_config_structure = {
+        # For now, we'll return a mock Docker configuration
+        # In a real implementation, we would generate actual Dockerfiles and docker-compose.yml
+        return {
             "frontend": {
-                "base_image": "Base image",
-                "build_stages": ["Stage 1", "Stage 2"],
-                "dockerfile_content": "Dockerfile content",
-                "optimizations": ["Optimization 1", "Optimization 2"]
+                "base_image": "node:18-alpine",
+                "build_steps": [
+                    "Copy package.json and install dependencies",
+                    "Copy source code",
+                    "Build the application",
+                    "Serve with nginx"
+                ],
+                "ports": [80],
+                "environment_variables": [
+                    "REACT_APP_API_URL",
+                    "REACT_APP_ENVIRONMENT"
+                ]
             },
             "backend": {
-                "base_image": "Base image",
-                "build_stages": ["Stage 1", "Stage 2"],
-                "dockerfile_content": "Dockerfile content",
-                "optimizations": ["Optimization 1", "Optimization 2"]
+                "base_image": "node:18-alpine",
+                "build_steps": [
+                    "Copy package.json and install dependencies",
+                    "Copy source code",
+                    "Build the application if needed"
+                ],
+                "ports": [3000],
+                "environment_variables": [
+                    "NODE_ENV",
+                    "DATABASE_URL",
+                    "REDIS_URL",
+                    "JWT_SECRET"
+                ]
             },
             "docker_compose": {
-                "services": ["Service 1", "Service 2"],
-                "networks": ["Network 1", "Network 2"],
-                "volumes": ["Volume 1", "Volume 2"],
-                "configuration": "Docker Compose content"
+                "services": [
+                    "frontend",
+                    "backend",
+                    "postgres",
+                    "redis"
+                ],
+                "networks": ["app-network"],
+                "volumes": ["postgres-data", "redis-data"]
             },
-            "security": {
-                "considerations": ["Consideration 1", "Consideration 2"],
-                "best_practices": ["Practice 1", "Practice 2"]
+            "optimization": {
+                "multi_stage_builds": True,
+                "layer_caching": True,
+                "image_size_optimization": True
             }
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to create Docker configuration, using default structure")
-            return docker_config_structure
-        
-        return result
-    
     async def _define_kubernetes_manifests(
         self, 
         blueprint: Dict[str, Any],
@@ -255,92 +226,115 @@ class DevOpsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Kubernetes manifests
         """
-        self.log_info("Defining Kubernetes manifests")
-        
-        system_message = (
-            "You are a DevOps engineer specializing in Kubernetes for "
-            "SaaS applications. Create comprehensive Kubernetes manifests "
-            "for the product based on the specified infrastructure architecture. "
-            "The manifests should follow best practices for Kubernetes deployment "
-            "and be optimized for the specified cloud provider."
-        )
-        
-        prompt = (
-            f"Create Kubernetes manifests for the product with these specifications:\n\n"
-            f"Infrastructure: {infrastructure}\n\n"
-            f"The Kubernetes manifests should include:\n"
-            f"1. Deployment configurations for each service\n"
-            f"2. Service definitions\n"
-            f"3. Ingress configuration\n"
-            f"4. ConfigMaps and Secrets management\n"
-            f"5. Volume claims\n"
-            f"6. Resource limits and requests\n"
-            f"7. Autoscaling configuration\n"
-            f"8. Health checks and probes\n\n"
-            f"Consider best practices for Kubernetes deployment and optimization "
-            f"for the specified cloud provider."
-        )
-        
-        kubernetes_structure = {
-            "deployments": {
-                "frontend": {
-                    "replicas": "Number of replicas",
-                    "container_spec": "Container specification",
-                    "strategy": "Deployment strategy",
-                    "manifest_content": "Deployment manifest content"
+        # For now, we'll return a mock Kubernetes manifests
+        # In a real implementation, we would generate actual YAML manifests
+        return {
+            "deployments": [
+                {
+                    "name": "frontend",
+                    "replicas": 2,
+                    "containers": [
+                        {
+                            "name": "frontend",
+                            "image": "frontend:latest",
+                            "resources": {
+                                "requests": {
+                                    "cpu": "100m",
+                                    "memory": "128Mi"
+                                },
+                                "limits": {
+                                    "cpu": "200m",
+                                    "memory": "256Mi"
+                                }
+                            }
+                        }
+                    ]
                 },
-                "backend": {
-                    "replicas": "Number of replicas",
-                    "container_spec": "Container specification",
-                    "strategy": "Deployment strategy",
-                    "manifest_content": "Deployment manifest content"
+                {
+                    "name": "backend",
+                    "replicas": 2,
+                    "containers": [
+                        {
+                            "name": "backend",
+                            "image": "backend:latest",
+                            "resources": {
+                                "requests": {
+                                    "cpu": "200m",
+                                    "memory": "256Mi"
+                                },
+                                "limits": {
+                                    "cpu": "500m",
+                                    "memory": "512Mi"
+                                }
+                            }
+                        }
+                    ]
                 }
-            },
-            "services": {
-                "frontend": {
-                    "type": "Service type",
-                    "ports": ["Port mapping 1", "Port mapping 2"],
-                    "manifest_content": "Service manifest content"
+            ],
+            "services": [
+                {
+                    "name": "frontend",
+                    "type": "ClusterIP",
+                    "ports": [
+                        {
+                            "port": 80,
+                            "targetPort": 80
+                        }
+                    ]
                 },
-                "backend": {
-                    "type": "Service type",
-                    "ports": ["Port mapping 1", "Port mapping 2"],
-                    "manifest_content": "Service manifest content"
+                {
+                    "name": "backend",
+                    "type": "ClusterIP",
+                    "ports": [
+                        {
+                            "port": 3000,
+                            "targetPort": 3000
+                        }
+                    ]
                 }
-            },
+            ],
             "ingress": {
-                "rules": ["Rule 1", "Rule 2"],
-                "tls": "TLS configuration",
-                "manifest_content": "Ingress manifest content"
+                "name": "app-ingress",
+                "rules": [
+                    {
+                        "host": "app.example.com",
+                        "paths": [
+                            {
+                                "path": "/",
+                                "service": "frontend",
+                                "port": 80
+                            },
+                            {
+                                "path": "/api",
+                                "service": "backend",
+                                "port": 3000
+                            }
+                        ]
+                    }
+                ],
+                "tls": True
             },
-            "config": {
-                "config_maps": ["ConfigMap 1", "ConfigMap 2"],
-                "secrets": ["Secret 1", "Secret 2"]
-            },
-            "storage": {
-                "volume_claims": ["Claim 1", "Claim 2"],
-                "storage_classes": ["Class 1", "Class 2"]
-            },
-            "autoscaling": {
-                "metrics": ["Metric 1", "Metric 2"],
-                "min_replicas": "Minimum replicas",
-                "max_replicas": "Maximum replicas",
-                "manifest_content": "HPA manifest content"
-            },
-            "health": {
-                "readiness_probes": ["Probe 1", "Probe 2"],
-                "liveness_probes": ["Probe 1", "Probe 2"]
-            }
+            "config_maps": [
+                {
+                    "name": "app-config",
+                    "data": {
+                        "API_URL": "https://app.example.com/api",
+                        "ENVIRONMENT": "production"
+                    }
+                }
+            ],
+            "secrets": [
+                {
+                    "name": "app-secrets",
+                    "data": {
+                        "DATABASE_URL": "[secret]",
+                        "REDIS_URL": "[secret]",
+                        "JWT_SECRET": "[secret]"
+                    }
+                }
+            ]
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to define Kubernetes manifests, using default structure")
-            return kubernetes_structure
-        
-        return result
-    
     async def _create_ci_cd_pipeline(
         self, 
         blueprint: Dict[str, Any],
@@ -356,101 +350,79 @@ class DevOpsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: CI/CD pipeline configuration
         """
-        self.log_info("Creating CI/CD pipeline")
-        
-        tech_stack = blueprint.get("stack", {})
-        infrastructure_tech = tech_stack.get("infrastructure", {})
-        ci_cd = infrastructure_tech.get("ci_cd", "GitHub Actions")
-        
-        system_message = (
-            f"You are a DevOps engineer specializing in CI/CD pipelines for "
-            f"SaaS applications. Create a comprehensive CI/CD pipeline using "
-            f"{ci_cd} for the product based on the specified infrastructure "
-            f"architecture. The pipeline should automate testing, building, "
-            f"and deployment processes, following best practices for continuous "
-            f"integration and deployment."
-        )
-        
-        prompt = (
-            f"Create a CI/CD pipeline using {ci_cd} with these specifications:\n\n"
-            f"Infrastructure: {infrastructure}\n\n"
-            f"The CI/CD pipeline should include:\n"
-            f"1. Workflow definitions for each stage (build, test, deploy)\n"
-            f"2. Environment configurations (dev, staging, production)\n"
-            f"3. Testing strategies (unit, integration, e2e)\n"
-            f"4. Artifact management\n"
-            f"5. Deployment strategies\n"
-            f"6. Rollback mechanisms\n"
-            f"7. Security scanning\n"
-            f"8. Notification and monitoring integrations\n\n"
-            f"Consider best practices for CI/CD pipelines and optimization "
-            f"for the specified infrastructure."
-        )
-        
-        ci_cd_structure = {
-            "platform": ci_cd,
-            "workflows": {
-                "build": {
-                    "triggers": ["Trigger 1", "Trigger 2"],
-                    "steps": ["Step 1", "Step 2"],
-                    "configuration": "Workflow configuration"
+        # For now, we'll return a mock CI/CD pipeline configuration
+        # In a real implementation, we would generate actual pipeline configuration files
+        return {
+            "tool": "GitHub Actions",
+            "environments": [
+                "development",
+                "staging",
+                "production"
+            ],
+            "workflows": [
+                {
+                    "name": "Build and Test",
+                    "trigger": "push to any branch",
+                    "steps": [
+                        "Checkout code",
+                        "Setup Node.js",
+                        "Install dependencies",
+                        "Run linting",
+                        "Run unit tests",
+                        "Run integration tests"
+                    ]
                 },
-                "test": {
-                    "triggers": ["Trigger 1", "Trigger 2"],
-                    "steps": ["Step 1", "Step 2"],
-                    "configuration": "Workflow configuration"
+                {
+                    "name": "Build and Deploy to Development",
+                    "trigger": "push to develop branch",
+                    "steps": [
+                        "Checkout code",
+                        "Setup Node.js",
+                        "Install dependencies",
+                        "Run tests",
+                        "Build Docker images",
+                        "Push Docker images to registry",
+                        "Deploy to development environment"
+                    ]
                 },
-                "deploy": {
-                    "triggers": ["Trigger 1", "Trigger 2"],
-                    "steps": ["Step 1", "Step 2"],
-                    "configuration": "Workflow configuration"
+                {
+                    "name": "Build and Deploy to Staging",
+                    "trigger": "push to staging branch",
+                    "steps": [
+                        "Checkout code",
+                        "Setup Node.js",
+                        "Install dependencies",
+                        "Run tests",
+                        "Build Docker images",
+                        "Push Docker images to registry",
+                        "Deploy to staging environment"
+                    ]
+                },
+                {
+                    "name": "Build and Deploy to Production",
+                    "trigger": "push to main branch",
+                    "steps": [
+                        "Checkout code",
+                        "Setup Node.js",
+                        "Install dependencies",
+                        "Run tests",
+                        "Build Docker images",
+                        "Push Docker images to registry",
+                        "Deploy to production environment"
+                    ]
                 }
-            },
-            "environments": {
-                "development": {
-                    "configuration": "Environment configuration",
-                    "deployment_process": "Deployment process description"
-                },
-                "staging": {
-                    "configuration": "Environment configuration",
-                    "deployment_process": "Deployment process description"
-                },
-                "production": {
-                    "configuration": "Environment configuration",
-                    "deployment_process": "Deployment process description"
-                }
-            },
+            ],
             "testing": {
-                "unit": "Unit testing strategy",
-                "integration": "Integration testing strategy",
-                "e2e": "End-to-end testing strategy"
-            },
-            "artifacts": {
-                "storage": "Artifact storage solution",
-                "management": "Artifact management process"
+                "unit_tests": "Jest",
+                "integration_tests": "Jest with Supertest",
+                "e2e_tests": "Cypress"
             },
             "deployment": {
-                "strategy": "Deployment strategy",
-                "rollback": "Rollback mechanism"
-            },
-            "security": {
-                "scanning": ["Scanning tool 1", "Scanning tool 2"],
-                "integration": "Security integration description"
-            },
-            "notifications": {
-                "channels": ["Channel 1", "Channel 2"],
-                "events": ["Event 1", "Event 2"]
+                "strategy": "Blue-Green",
+                "rollback": "Automatic on failure"
             }
         }
         
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to create CI/CD pipeline, using default structure")
-            return ci_cd_structure
-        
-        return result
-    
     async def _define_monitoring(
         self, 
         blueprint: Dict[str, Any],
@@ -466,99 +438,72 @@ class DevOpsAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Monitoring and logging configuration
         """
-        self.log_info("Defining monitoring and logging setup")
-        
-        system_message = (
-            "You are a DevOps engineer specializing in monitoring and observability "
-            "for SaaS applications. Define a comprehensive monitoring and logging "
-            "setup for the product based on the specified infrastructure architecture. "
-            "The setup should provide full visibility into the application's performance, "
-            "errors, and user experience."
-        )
-        
-        prompt = (
-            f"Define a monitoring and logging setup with these specifications:\n\n"
-            f"Infrastructure: {infrastructure}\n\n"
-            f"The monitoring and logging setup should include:\n"
-            f"1. Metrics collection and visualization\n"
-            f"2. Log aggregation and analysis\n"
-            f"3. Application performance monitoring\n"
-            f"4. Error tracking and alerting\n"
-            f"5. Uptime and availability monitoring\n"
-            f"6. User experience monitoring\n"
-            f"7. Resource utilization tracking\n"
-            f"8. Security monitoring\n\n"
-            f"Consider best practices for monitoring and observability of "
-            f"SaaS applications and integration with the specified infrastructure."
-        )
-        
-        monitoring_structure = {
-            "metrics": {
-                "collection": {
-                    "tool": "Collection tool",
-                    "approach": "Collection approach",
-                    "configuration": "Configuration details"
+        # For now, we'll return a mock monitoring configuration
+        # In a real implementation, we would generate actual monitoring configuration files
+        return {
+            "observability_stack": {
+                "monitoring": "Prometheus",
+                "visualization": "Grafana",
+                "logging": "ELK Stack",
+                "tracing": "Jaeger"
+            },
+            "metrics": [
+                "CPU usage",
+                "Memory usage",
+                "Request rate",
+                "Error rate",
+                "Response time",
+                "Database query time"
+            ],
+            "dashboards": [
+                {
+                    "name": "System Overview",
+                    "metrics": [
+                        "CPU usage",
+                        "Memory usage",
+                        "Disk usage",
+                        "Network traffic"
+                    ]
                 },
-                "visualization": {
-                    "tool": "Visualization tool",
-                    "dashboards": ["Dashboard 1", "Dashboard 2"],
-                    "configuration": "Configuration details"
-                }
-            },
-            "logging": {
-                "aggregation": {
-                    "tool": "Aggregation tool",
-                    "approach": "Aggregation approach",
-                    "configuration": "Configuration details"
+                {
+                    "name": "Application Performance",
+                    "metrics": [
+                        "Request rate",
+                        "Error rate",
+                        "Response time",
+                        "Database query time"
+                    ]
                 },
-                "analysis": {
-                    "tool": "Analysis tool",
-                    "capabilities": ["Capability 1", "Capability 2"],
-                    "configuration": "Configuration details"
+                {
+                    "name": "Business Metrics",
+                    "metrics": [
+                        "Active users",
+                        "Conversion rate",
+                        "Revenue",
+                        "Churn rate"
+                    ]
                 }
-            },
-            "apm": {
-                "tool": "APM tool",
-                "features": ["Feature 1", "Feature 2"],
-                "configuration": "Configuration details"
-            },
-            "error_tracking": {
-                "tool": "Error tracking tool",
-                "integration": "Integration approach",
-                "configuration": "Configuration details"
-            },
-            "uptime": {
-                "tool": "Uptime monitoring tool",
-                "checks": ["Check 1", "Check 2"],
-                "configuration": "Configuration details"
-            },
-            "user_experience": {
-                "tool": "User experience monitoring tool",
-                "metrics": ["Metric 1", "Metric 2"],
-                "configuration": "Configuration details"
-            },
-            "resource_monitoring": {
-                "tool": "Resource monitoring tool",
-                "resources": ["Resource 1", "Resource 2"],
-                "configuration": "Configuration details"
-            },
-            "security_monitoring": {
-                "tool": "Security monitoring tool",
-                "capabilities": ["Capability 1", "Capability 2"],
-                "configuration": "Configuration details"
-            },
-            "alerting": {
-                "tool": "Alerting tool",
-                "policies": ["Policy 1", "Policy 2"],
-                "channels": ["Channel 1", "Channel 2"],
-                "configuration": "Configuration details"
+            ],
+            "alerts": [
+                {
+                    "name": "High CPU usage",
+                    "condition": "CPU usage > 80% for 5 minutes",
+                    "severity": "warning"
+                },
+                {
+                    "name": "High memory usage",
+                    "condition": "Memory usage > 80% for 5 minutes",
+                    "severity": "warning"
+                },
+                {
+                    "name": "High error rate",
+                    "condition": "Error rate > 5% for 5 minutes",
+                    "severity": "critical"
+                }
+            ],
+            "logs": {
+                "retention": "30 days",
+                "storage": "Amazon S3",
+                "parsing": "Logstash"
             }
         }
-        
-        result = generate_json_completion(prompt, system_message)
-        
-        if not result or not isinstance(result, dict):
-            self.log_error("Failed to define monitoring setup, using default structure")
-            return monitoring_structure
-        
-        return result
