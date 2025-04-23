@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Notion",
+    "description": "All-in-one workspace for notes, tasks, wikis, and databases. Notion is a collaborative platform that allows teams to plan, write, and organize all in one place.",
+    "url": "https://www.notion.so",
+    "source": "Product Hunt",
+    "popularity_score": 9.5,
+    "category": "Productivity",
+    "feature_list": [
+      "Customizable workspace",
+      "Rich text editing",
+      "Database functionality",
+      "Task management",
+      "Wiki creation",
+      "Team collaboration",
+      "Content organization",
+      "API access",
+      "Template gallery",
+      "Web clipper"
+    ],
+    "target_audience": "Teams, individuals, students, and professionals looking for a centralized workspace",
+    "pricing_model": "Freemium",
+    "analysis": {
+      "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}"
+    }
+  }
+]

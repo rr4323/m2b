@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#4285F4", "id": "product:notion", "label": "Notion", "shape": "dot", "size": 25, "title": "\u003cb\u003eNotion\u003c/b\u003e\u003cbr\u003edescription: All-in-one workspace for notes, tasks, wikis, and databases. Notion is a collaborative platform that allows teams to plan, write, and organize all in one place.\u003cbr\u003eurl: https://www.notion.so\u003cbr\u003epricing: Freemium\u003cbr\u003eaudience: Teams, individuals, students, and professionals looking for a centralized workspace\u003cbr\u003e"}, {"color": "#FBBC05", "id": "category:productivity", "label": "Productivity", "shape": "triangle", "size": 20, "title": "\u003cb\u003eProductivity\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:customizable_workspace", "label": "Customizable workspace", "shape": "diamond", "size": 15, "title": "\u003cb\u003eCustomizable workspace\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:rich_text_editing", "label": "Rich text editing", "shape": "diamond", "size": 15, "title": "\u003cb\u003eRich text editing\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:database_functionality", "label": "Database functionality", "shape": "diamond", "size": 15, "title": "\u003cb\u003eDatabase functionality\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:task_management", "label": "Task management", "shape": "diamond", "size": 15, "title": "\u003cb\u003eTask management\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:wiki_creation", "label": "Wiki creation", "shape": "diamond", "size": 15, "title": "\u003cb\u003eWiki creation\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:team_collaboration", "label": "Team collaboration", "shape": "diamond", "size": 15, "title": "\u003cb\u003eTeam collaboration\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:content_organization", "label": "Content organization", "shape": "diamond", "size": 15, "title": "\u003cb\u003eContent organization\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:api_access", "label": "API access", "shape": "diamond", "size": 15, "title": "\u003cb\u003eAPI access\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:template_gallery", "label": "Template gallery", "shape": "diamond", "size": 15, "title": "\u003cb\u003eTemplate gallery\u003c/b\u003e\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:web_clipper", "label": "Web clipper", "shape": "diamond", "size": 15, "title": "\u003cb\u003eWeb clipper\u003c/b\u003e\u003cbr\u003e"}, {"color": "#EA4335", "id": "gap:feature:advanced_ai_integration", "label": "Advanced AI Integration", "shape": "star", "size": 20, "title": "\u003cb\u003eAdvanced AI Integration\u003c/b\u003e\u003cbr\u003egap_type: feature\u003cbr\u003edescription: Integration with GPT-4 or other advanced AI models to provide intelligent content generation, predictive suggestions, and pattern recognition within productivity tools.\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:advanced_ai_integration", "label": "Advanced AI Integration", "shape": "diamond", "size": 15, "title": "\u003cb\u003eAdvanced AI Integration\u003c/b\u003e\u003cbr\u003e"}, {"color": "#EA4335", "id": "gap:feature:cross-platform_sync_with_offline_mode", "label": "Cross-Platform Sync with Offline Mode", "shape": "star", "size": 20, "title": "\u003cb\u003eCross-Platform Sync with Offline Mode\u003c/b\u003e\u003cbr\u003egap_type: feature\u003cbr\u003edescription: Fully functional offline mode with seamless conflict resolution upon reconnection, ensuring productivity during travel or in areas with poor connectivity.\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:cross-platform_sync_with_offline_mode", "label": "Cross-Platform Sync with Offline Mode", "shape": "diamond", "size": 15, "title": "\u003cb\u003eCross-Platform Sync with Offline Mode\u003c/b\u003e\u003cbr\u003e"}, {"color": "#EA4335", "id": "gap:feature:enhanced_data_visualization", "label": "Enhanced Data Visualization", "shape": "star", "size": 20, "title": "\u003cb\u003eEnhanced Data Visualization\u003c/b\u003e\u003cbr\u003egap_type: feature\u003cbr\u003edescription: Advanced data visualization tools integrated directly into the workspace, allowing users to create interactive charts, graphs, and dashboards without switching contexts.\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:enhanced_data_visualization", "label": "Enhanced Data Visualization", "shape": "diamond", "size": 15, "title": "\u003cb\u003eEnhanced Data Visualization\u003c/b\u003e\u003cbr\u003e"}, {"color": "#EA4335", "id": "gap:feature:enterprise-grade_security_and_compliance", "label": "Enterprise-Grade Security and Compliance", "shape": "star", "size": 20, "title": "\u003cb\u003eEnterprise-Grade Security and Compliance\u003c/b\u003e\u003cbr\u003egap_type: feature\u003cbr\u003edescription: Enhanced security features tailored for enterprise users, including advanced encryption, audit logs, compliance certifications (HIPAA, SOC2, etc.), and role-based access controls.\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:enterprise-grade_security_and_compliance", "label": "Enterprise-Grade Security and Compliance", "shape": "diamond", "size": 15, "title": "\u003cb\u003eEnterprise-Grade Security and Compliance\u003c/b\u003e\u003cbr\u003e"}, {"color": "#EA4335", "id": "gap:feature:workflow_automation_engine", "label": "Workflow Automation Engine", "shape": "star", "size": 20, "title": "\u003cb\u003eWorkflow Automation Engine\u003c/b\u003e\u003cbr\u003egap_type: feature\u003cbr\u003edescription: A powerful visual automation builder that allows non-technical users to create complex workflows, integrations, and custom business processes without coding.\u003cbr\u003e"}, {"color": "#34A853", "id": "feature:workflow_automation_engine", "label": "Workflow Automation Engine", "shape": "diamond", "size": 15, "title": "\u003cb\u003eWorkflow Automation Engine\u003c/b\u003e\u003cbr\u003e"}]);
+                  edges = new vis.DataSet([{"color": "#FBBC05", "from": "product:notion", "title": "belongs_to", "to": "category:productivity"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:customizable_workspace"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:rich_text_editing"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:database_functionality"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:task_management"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:wiki_creation"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:team_collaboration"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:content_organization"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:api_access"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:template_gallery"}, {"color": "#34A853", "from": "product:notion", "title": "has_feature", "to": "feature:web_clipper"}, {"color": "#EA4335", "from": "product:notion", "title": "identified_in", "to": "gap:feature:advanced_ai_integration"}, {"color": "#EA4335", "from": "product:notion", "title": "identified_in", "to": "gap:feature:cross-platform_sync_with_offline_mode"}, {"color": "#EA4335", "from": "product:notion", "title": "identified_in", "to": "gap:feature:enhanced_data_visualization"}, {"color": "#AAAAAA", "from": "gap:feature:advanced_ai_integration", "title": "suggests", "to": "feature:advanced_ai_integration"}, {"color": "#AAAAAA", "from": "gap:feature:cross-platform_sync_with_offline_mode", "title": "suggests", "to": "feature:cross-platform_sync_with_offline_mode"}, {"color": "#AAAAAA", "from": "gap:feature:enhanced_data_visualization", "title": "suggests", "to": "feature:enhanced_data_visualization"}, {"color": "#AAAAAA", "from": "gap:feature:enterprise-grade_security_and_compliance", "title": "suggests", "to": "feature:enterprise-grade_security_and_compliance"}, {"color": "#AAAAAA", "from": "gap:feature:workflow_automation_engine", "title": "suggests", "to": "feature:workflow_automation_engine"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"forceAtlas2Based": {"gravitationalConstant": -50, "centralGravity": 0.01, "springLength": 100, "springConstant": 0.08}, "maxVelocity": 50, "solver": "forceAtlas2Based", "timestep": 0.35, "stabilization": {"enabled": true, "iterations": 1000}}, "interaction": {"hover": true, "tooltipDelay": 200}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

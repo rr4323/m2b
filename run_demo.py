@@ -1,17 +1,16 @@
 """
-Main entry point for the Multi-Agent SaaS Cloner & Enhancer system.
-This coordinates the workflow for discovering, analyzing, and enhancing SaaS applications.
+Demo script for the SaaS Cloner system.
+This uses sample data without attempting to scrape websites.
 """
 import asyncio
 import json
 import logging
 import os
+import sys
 from typing import Dict, Any, List, Optional
 
 from agents.knowledge_graph_agent import KnowledgeGraphAgent
-from utils.web_scraper import discover_trending_products, save_discovered_products, load_discovered_products
-from utils.openai_utils import analyze_product_data, identify_market_gaps, generate_product_blueprint
-from utils.knowledge_graph import knowledge_graph
+from utils.openai_utils import generate_product_blueprint
 
 import config
 
@@ -28,118 +27,50 @@ os.makedirs("data", exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 
 # Constants
-DISCOVERY_OUTPUT_PATH = "data/discovered_products.json"
-ANALYSIS_OUTPUT_PATH = "data/analyzed_products.json"
-GAPS_OUTPUT_PATH = "data/identified_gaps.json"
+SAMPLE_PRODUCTS_PATH = "data/sample_products.json"
+SAMPLE_GAPS_PATH = "data/sample_gaps.json"
 BLUEPRINT_OUTPUT_PATH = "data/product_blueprint.json"
 SAMPLE_CATEGORY = "Productivity"
 
-async def discover_products(category: str, sources: Optional[List[str]] = None, use_cache: bool = True) -> List[Dict[str, Any]]:
+async def load_sample_products() -> List[Dict[str, Any]]:
     """
-    Discover trending products in a category.
+    Load sample product data.
     
-    Args:
-        category: The category to discover products for
-        sources: List of sources to search (producthunt, g2, capterra, reddit)
-        use_cache: Whether to use cached product data if available
-        
     Returns:
-        List[Dict[str, Any]]: List of discovered products
+        List[Dict[str, Any]]: List of sample products
     """
-    # Check if we have cached product data
-    if use_cache and os.path.exists(DISCOVERY_OUTPUT_PATH):
-        logger.info(f"Loading cached product data from {DISCOVERY_OUTPUT_PATH}")
-        products = load_discovered_products(DISCOVERY_OUTPUT_PATH)
-        if products:
-            return products
+    if not os.path.exists(SAMPLE_PRODUCTS_PATH):
+        logger.error(f"Sample products file not found: {SAMPLE_PRODUCTS_PATH}")
+        return []
     
-    # If no cached data or cache not wanted, scrape product data
-    logger.info(f"Discovering trending products in category: {category}")
-    products = discover_trending_products(category, sources)
-    
-    # Save discovered products to cache
-    save_discovered_products(products, DISCOVERY_OUTPUT_PATH)
-    
-    return products
+    try:
+        with open(SAMPLE_PRODUCTS_PATH, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+        logger.info(f"Loaded {len(products)} sample products")
+        return products
+    except Exception as e:
+        logger.error(f"Error loading sample products: {e}")
+        return []
 
-async def analyze_products(products: List[Dict[str, Any]], use_cache: bool = True) -> List[Dict[str, Any]]:
+async def load_sample_gaps() -> List[Dict[str, Any]]:
     """
-    Analyze discovered products.
+    Load sample gap data.
     
-    Args:
-        products: List of discovered products
-        use_cache: Whether to use cached analysis data if available
-        
     Returns:
-        List[Dict[str, Any]]: List of analyzed products
+        List[Dict[str, Any]]: List of sample gaps
     """
-    # Check if we have cached analysis data
-    if use_cache and os.path.exists(ANALYSIS_OUTPUT_PATH):
-        logger.info(f"Loading cached product analysis from {ANALYSIS_OUTPUT_PATH}")
-        with open(ANALYSIS_OUTPUT_PATH, 'r', encoding='utf-8') as f:
-            analyzed_products = json.load(f)
-        if analyzed_products:
-            return analyzed_products
+    if not os.path.exists(SAMPLE_GAPS_PATH):
+        logger.error(f"Sample gaps file not found: {SAMPLE_GAPS_PATH}")
+        return []
     
-    # Analyze each product
-    logger.info(f"Analyzing {len(products)} discovered products")
-    analyzed_products = []
-    
-    for product in products:
-        logger.info(f"Analyzing product: {product.get('name', 'Unknown Product')}")
-        analysis = analyze_product_data(product)
-        
-        # Combine product data with analysis
-        analyzed_product = {**product, "analysis": analysis}
-        analyzed_products.append(analyzed_product)
-    
-    # Save analyzed products to cache
-    with open(ANALYSIS_OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        json.dump(analyzed_products, f, indent=2, ensure_ascii=False)
-    
-    return analyzed_products
-
-async def identify_gaps(products: List[Dict[str, Any]], category: str, use_cache: bool = True) -> List[Dict[str, Any]]:
-    """
-    Identify market gaps based on analyzed products.
-    
-    Args:
-        products: List of analyzed products
-        category: The category of the products
-        use_cache: Whether to use cached gap data if available
-        
-    Returns:
-        List[Dict[str, Any]]: List of identified market gaps
-    """
-    # Check if we have cached gap data
-    if use_cache and os.path.exists(GAPS_OUTPUT_PATH):
-        logger.info(f"Loading cached gap analysis from {GAPS_OUTPUT_PATH}")
-        with open(GAPS_OUTPUT_PATH, 'r', encoding='utf-8') as f:
+    try:
+        with open(SAMPLE_GAPS_PATH, 'r', encoding='utf-8') as f:
             gaps = json.load(f)
-        if gaps:
-            return gaps
-    
-    # Identify market gaps
-    logger.info(f"Identifying market gaps in {category} category based on {len(products)} products")
-    gaps = identify_market_gaps(products, category)
-    
-    # If no gaps were identified, use sample gaps
-    if not gaps:
-        sample_gaps_path = "data/sample_gaps.json"
-        if os.path.exists(sample_gaps_path):
-            logger.info(f"No gaps identified. Using sample gaps from {sample_gaps_path}")
-            try:
-                with open(sample_gaps_path, 'r', encoding='utf-8') as f:
-                    gaps = json.load(f)
-                logger.info(f"Loaded {len(gaps)} sample gaps")
-            except Exception as e:
-                logger.error(f"Error loading sample gaps: {e}")
-    
-    # Save identified gaps to cache
-    with open(GAPS_OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        json.dump(gaps, f, indent=2, ensure_ascii=False)
-    
-    return gaps
+        logger.info(f"Loaded {len(gaps)} sample gaps")
+        return gaps
+    except Exception as e:
+        logger.error(f"Error loading sample gaps: {e}")
+        return []
 
 async def create_product_blueprint(
     product_name: str,
@@ -169,9 +100,9 @@ async def create_product_blueprint(
         if blueprint:
             return blueprint
     
-    # Check if OpenAI API key is available
+    # If we don't have an OpenAI API key, use the default blueprint
     if not config.OPENAI_API_KEY:
-        logger.warning("OpenAI API key not found. Using default product blueprint.")
+        logger.info("OpenAI API not properly configured. Using default product blueprint.")
         try:
             default_blueprint_path = "data/default_product_blueprint.json"
             if os.path.exists(default_blueprint_path):
@@ -259,72 +190,64 @@ async def build_knowledge_graph(products: List[Dict[str, Any]], gaps: List[Dict[
     
     return result
 
-async def run_workflow():
+async def run_demo_workflow():
     """
-    Run the complete SaaS Cloner workflow from discovery to blueprint generation.
+    Run the demo workflow using sample data.
     """
-    logger.info("Starting the workflow")
+    logger.info("Starting the demo workflow")
     
-    # Discover products in the Productivity category
-    logger.info(f"Starting market discovery process")
-    products = await discover_products(SAMPLE_CATEGORY, use_cache=True)
-    logger.info(f"Market discovery completed, found {len(products)} products")
+    # Load sample products
+    products = await load_sample_products()
+    logger.info(f"Loaded {len(products)} sample products")
     
     # For demo purposes, let's just use one product to keep things simpler
     sample_product = next((p for p in products if "Notion" in p.get("name", "")), products[0])
-    logger.info(f"Analyzing product: {sample_product.get('name', 'Unknown Product')}")
-    sample_products = [sample_product]
+    logger.info(f"Using sample product: {sample_product.get('name', 'Unknown Product')}")
     
-    # Analyze products
-    analyzed_products = await analyze_products(sample_products, use_cache=True)
-    
-    # Identify market gaps
-    logger.info("Starting gap analysis process")
-    gaps = await identify_gaps(analyzed_products, SAMPLE_CATEGORY, use_cache=True)
-    logger.info("Completed gap analysis")
+    # Load sample gaps
+    gaps = await load_sample_gaps()
+    logger.info(f"Loaded {len(gaps)} sample gaps")
     
     # Create product blueprint
     product_name = f"Enhanced {sample_product.get('name', 'SaaS Product')}"
     product_description = f"An improved version of {sample_product.get('name', 'SaaS Product')} with additional features and capabilities"
     
-    logger.info(f"Starting product blueprint generation")
+    logger.info(f"Creating product blueprint for: {product_name}")
     blueprint = await create_product_blueprint(
         product_name,
         product_description,
         gaps[:3],  # Use top 3 gaps
-        analyzed_products,
+        [sample_product],
         use_cache=True
     )
-    logger.info(f"Product blueprint generated for: {product_name}")
+    logger.info(f"Product blueprint created for: {product_name}")
     
     # Build and visualize knowledge graph
     logger.info("Building and visualizing knowledge graph")
-    kg_result = await build_knowledge_graph(analyzed_products, gaps)
+    kg_result = await build_knowledge_graph(products, gaps)
     
     # Complete workflow
-    logger.info("SaaS Cloner workflow completed")
+    logger.info("Demo workflow completed")
     
     return {
-        "discovered_products": len(products),
-        "analyzed_products": len(analyzed_products),
-        "identified_gaps": len(gaps),
+        "sample_products": len(products),
+        "sample_gaps": len(gaps),
         "product_blueprint": product_name,
         "knowledge_graph_stats": kg_result
     }
 
 def main():
-    """Main entry point for the SaaS Cloner workflow"""
+    """Main entry point for the demo workflow"""
     try:
-        result = asyncio.run(run_workflow())
-        print("\n=== Workflow Results ===")
-        print(f"Discovered Products: {result['discovered_products']}")
-        print(f"Analyzed Products: {result['analyzed_products']}")
-        print(f"Identified Gaps: {result['identified_gaps']}")
+        result = asyncio.run(run_demo_workflow())
+        print("\n=== Demo Workflow Results ===")
+        print(f"Sample Products: {result['sample_products']}")
+        print(f"Sample Gaps: {result['sample_gaps']}")
         print(f"Product Blueprint: {result['product_blueprint']}")
         print(f"Knowledge Graph: {result['knowledge_graph_stats'].get('num_products', 0)} products, {result['knowledge_graph_stats'].get('num_features', 0)} features")
         print("\nCheck the 'data' directory for detailed outputs and 'output' directory for visualizations")
     except Exception as e:
-        logger.error(f"Error running workflow: {e}", exc_info=True)
+        logger.error(f"Error running demo workflow: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()

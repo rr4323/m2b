@@ -2,7 +2,7 @@
 Base Agent interface for all specialized agents in the SaaS Cloner system.
 """
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 class BaseAgent:
     """
@@ -34,9 +34,8 @@ class BaseAgent:
         Returns:
             Dict[str, Any]: The result of the agent's task
         """
-        self.log_info("Running agent task")
-        # This method should be overridden by subclasses
-        return {"message": "BaseAgent.run() should be overridden by specialized agents"}
+        # This method should be implemented by each specialized agent
+        raise NotImplementedError("Specialized agents must implement the run method")
     
     def log_info(self, message: str) -> None:
         """Log an info message"""

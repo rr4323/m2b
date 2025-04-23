@@ -1,0 +1,112 @@
+[
+  {
+    "name": "Notion",
+    "description": "All-in-one workspace for notes, tasks, wikis, and databases. Notion is a collaborative platform that allows teams to plan, write, and organize all in one place.",
+    "url": "https://www.notion.so",
+    "source": "Product Hunt",
+    "popularity_score": 9.5,
+    "category": "Productivity",
+    "feature_list": [
+      "Customizable workspace",
+      "Rich text editing",
+      "Database functionality",
+      "Task management",
+      "Wiki creation",
+      "Team collaboration",
+      "Content organization",
+      "API access",
+      "Template gallery",
+      "Web clipper"
+    ],
+    "target_audience": "Teams, individuals, students, and professionals looking for a centralized workspace",
+    "pricing_model": "Freemium"
+  },
+  {
+    "name": "Asana",
+    "description": "Work management platform designed to help teams organize, track, and manage their work. Asana helps teams coordinate and manage projects, tasks, and deadlines.",
+    "url": "https://www.asana.com",
+    "source": "G2",
+    "popularity_score": 8.8,
+    "category": "Productivity",
+    "feature_list": [
+      "Task management",
+      "Project timelines",
+      "Team workload visualization",
+      "Goal tracking",
+      "Custom fields",
+      "Task dependencies",
+      "Project portfolios",
+      "Workflow automation",
+      "Reporting tools",
+      "Integration with other apps"
+    ],
+    "target_audience": "Teams of all sizes needing to coordinate complex projects and workflows",
+    "pricing_model": "Freemium"
+  },
+  {
+    "name": "Trello",
+    "description": "Visual collaboration tool that creates a shared perspective on any project. Trello's boards, lists, and cards enable teams to organize and prioritize projects in a fun, flexible way.",
+    "url": "https://www.trello.com",
+    "source": "Capterra",
+    "popularity_score": 8.5,
+    "category": "Productivity",
+    "feature_list": [
+      "Kanban board interface",
+      "Card-based organization",
+      "Checklists",
+      "Due dates",
+      "File attachments",
+      "Labels and tags",
+      "Power-Ups (extensions)",
+      "Automation",
+      "Team collaboration",
+      "Mobile apps"
+    ],
+    "target_audience": "Teams looking for visual project management and task tracking",
+    "pricing_model": "Freemium"
+  },
+  {
+    "name": "Evernote",
+    "description": "Note-taking app that helps you capture and prioritize ideas, projects, and to-do lists, so nothing falls through the cracks.",
+    "url": "https://www.evernote.com",
+    "source": "G2",
+    "popularity_score": 7.9,
+    "category": "Productivity",
+    "feature_list": [
+      "Rich text notes",
+      "Web clipper",
+      "Document scanning",
+      "Search functionality",
+      "Notebooks and tags",
+      "Task lists",
+      "Note templates",
+      "Cross-device sync",
+      "Collaboration features",
+      "PDF annotation"
+    ],
+    "target_audience": "Individuals and small teams looking to organize notes and information",
+    "pricing_model": "Freemium"
+  },
+  {
+    "name": "ClickUp",
+    "description": "Productivity platform that brings work together in one place. ClickUp offers task management, docs, goals, and chat in one unified platform.",
+    "url": "https://www.clickup.com",
+    "source": "Product Hunt",
+    "popularity_score": 8.7,
+    "category": "Productivity",
+    "feature_list": [
+      "Task management",
+      "Multiple views (list, board, calendar)",
+      "Custom statuses",
+      "Goal tracking",
+      "Document creation",
+      "Time tracking",
+      "Dashboards",
+      "Automation",
+      "Integrations",
+      "Templates"
+    ],
+    "target_audience": "Teams looking for a comprehensive productivity platform",
+    "pricing_model": "Freemium"
+  }
+]

@@ -1,406 +1,717 @@
 """
 Web scraping utilities for the SaaS Cloner system.
+
+This module provides functionality for scraping SaaS product data
+from various sources including Product Hunt, G2, Capterra, and Reddit.
 """
 import logging
-import re
-import requests
-from typing import Dict, List, Any, Optional, Tuple
-from bs4 import BeautifulSoup
-import trafilatura
-from urllib.parse import urlparse
+import json
+import os
+import random
+import time
+from typing import Dict, Any, List, Optional, Tuple, Union, cast
+import urllib.parse
 
-def get_website_text_content(url: str) -> str:
+import requests
+import trafilatura
+from bs4 import BeautifulSoup
+
+import config
+
+logger = logging.getLogger(__name__)
+
+# Common headers to mimic browser behavior
+DEFAULT_HEADERS = {
+    'User-Agent': config.USER_AGENT,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Referer': 'https://www.google.com/',
+    'DNT': '1',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+}
+
+def fetch_url(url: str, headers: Optional[Dict[str, str]] = None, 
+              params: Optional[Dict[str, str]] = None, retries: int = 3) -> Optional[str]:
     """
-    Extract the main text content from a website.
+    Fetch the content of a URL with retries and error handling.
     
     Args:
-        url (str): The URL to scrape
+        url: The URL to fetch
+        headers: Optional request headers
+        params: Optional query parameters
+        retries: Number of times to retry on failure
+        
+    Returns:
+        Optional[str]: The response text, or None if the fetch failed
+    """
+    if headers is None:
+        headers = DEFAULT_HEADERS.copy()
+    
+    for attempt in range(retries):
+        try:
+            response = requests.get(
+                url, 
+                headers=headers, 
+                params=params, 
+                timeout=config.REQUEST_TIMEOUT
+            )
+            response.raise_for_status()
+            return response.text
+        except requests.RequestException as e:
+            logger.warning(f"Failed to fetch {url} (attempt {attempt+1}/{retries}): {e}")
+            if attempt + 1 < retries:
+                # Add jitter to avoid rate limiting
+                time.sleep(random.uniform(1, 3) * (attempt + 1))
+            else:
+                logger.error(f"Failed to fetch {url} after {retries} attempts")
+                return None
+
+def extract_text_from_html(html: str) -> str:
+    """
+    Extract the main text content from HTML using trafilatura.
+    
+    Args:
+        html: The HTML content to extract text from
         
     Returns:
         str: The extracted text content
     """
-    # First try to get actual content from the website
-    try:
-        downloaded = trafilatura.fetch_url(url)
-        text = trafilatura.extract(downloaded)
-        if text and len(text) > 100:  # Ensure we have substantial content
-            return text
-    except Exception as e:
-        logging.warning(f"Error extracting content from {url}: {e}")
-    
-    # If we couldn't get actual content, provide example content based on the domain
-    domain = extract_domain(url)
-    logging.info(f"Using example content for domain: {domain}")
-    
-    # Common domains we might encounter
-    domain_content = {
-        "notion.so": """
-        Notion is an all-in-one workspace for notes, project management, documents, and collaboration. 
-        Key features include:
-        - Flexible pages and databases for organizing information
-        - Team wikis and knowledge bases
-        - Project and task management with Kanban boards, calendars, and lists
-        - Document collaboration with real-time editing
-        - Integration with tools like Slack, GitHub, and Google Drive
-        
-        Pricing:
-        - Free: For individuals with limited blocks
-        - Personal Pro ($4/month): Unlimited blocks and file uploads
-        - Team ($8/person/month): Collaborative workspace with advanced permissions
-        - Enterprise: Custom pricing with enhanced security and support
-        
-        Notion is used by teams at companies like Pixar, Samsung, Nike, and IBM to organize their work
-        and streamline their workflows in a single, flexible tool.
-        """,
-        
-        "trello.com": """
-        Trello is a visual collaboration tool that enables teams to manage projects, workflows, and tasks.
-        Key features include:
-        - Boards, lists, and cards for organizing work
-        - Drag-and-drop functionality for easy management
-        - Custom workflows with automation
-        - Power-Ups for integrating with other services
-        - Team collaboration with comments, attachments, and due dates
-        
-        Pricing:
-        - Free: Basic features for individuals and small teams
-        - Standard ($5/user/month): More Power-Ups and advanced checklists
-        - Premium ($10/user/month): Additional views and admin controls
-        - Enterprise ($17.50/user/month): Enhanced security and support
-        
-        Trello is known for its simplicity and flexibility, making it suitable for various use cases from
-        software development to marketing campaigns and personal task management.
-        """,
-        
-        "asana.com": """
-        Asana is a work management platform designed to help teams organize, track, and manage their work.
-        Key features include:
-        - Tasks, projects, and portfolios for work organization
-        - Multiple views including list, board, calendar, and timeline
-        - Workflow automation to reduce manual work
-        - Goals tracking to align work with objectives
-        - Forms for collecting structured information
-        
-        Pricing:
-        - Basic: Free for individuals and small teams
-        - Premium ($10.99/user/month): Timeline, custom fields, and reporting
-        - Business ($24.99/user/month): Portfolios, workload, and advanced integrations
-        - Enterprise: Custom pricing with enhanced security and support
-        
-        Asana is used by more than 100,000 organizations worldwide, including NASA, Spotify, and Airbnb,
-        to coordinate work and achieve project goals efficiently.
-        """,
-        
-        "clickup.com": """
-        ClickUp is an all-in-one productivity platform that brings together tasks, docs, goals, and chat.
-        Key features include:
-        - Customizable views for different work styles
-        - Documents and wikis for knowledge management
-        - Goals for tracking objectives and key results
-        - Automation for repetitive tasks
-        - Time tracking and reporting
-        
-        Pricing:
-        - Free: 100MB storage with unlimited tasks
-        - Unlimited ($5/member/month): Unlimited storage and integrations
-        - Business ($12/member/month): Custom fields and advanced automation
-        - Business Plus ($19/member/month): Team sharing and custom roles
-        - Enterprise: Custom pricing with white labeling and API
-        
-        ClickUp is designed to replace several workplace apps with one unified platform, allowing
-        teams to save time and work more efficiently.
-        """,
-        
-        "todoist.com": """
-        Todoist is a task management app designed to organize work and life with powerful features and a clean interface.
-        Key features include:
-        - Task management with due dates, priorities, and labels
-        - Projects and sections for organizing tasks
-        - Natural language processing for quick task entry
-        - Recurring task scheduling
-        - Collaboration for team task management
-        
-        Pricing:
-        - Free: Basic features for personal use
-        - Pro ($4/month): Reminders, labels, filters, and backups
-        - Business ($6/user/month): Team collaboration and admin controls
-        
-        Todoist is used by millions of people and teams worldwide to stay organized and focused on what matters.
-        The app is available on all major platforms, including web, iOS, Android, macOS, and Windows.
-        """
-    }
-    
-    # Default content if specific domain not found
-    default_content = f"""
-    {domain} is a SaaS product that provides solutions for businesses and individuals.
-    The platform offers a range of features designed to improve productivity and workflow efficiency.
-    Users benefit from collaboration tools, automation capabilities, and integration with other services.
-    The pricing typically includes free and paid tiers with various feature sets catering to different
-    needs and usage levels.
-    """
-    
-    return domain_content.get(domain, default_content)
+    text = trafilatura.extract(html)
+    if text is None:
+        # Fallback to BeautifulSoup if trafilatura fails
+        soup = BeautifulSoup(html, 'html.parser')
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.decompose()
+        text = soup.get_text(separator=' ', strip=True)
+    return text
 
-def scrape_product_hunt(category: str = None, limit: int = 10) -> List[Dict[str, Any]]:
+def extract_structured_product_data(html: str, source: str) -> List[Dict[str, Any]]:
     """
-    Scrape trending products from Product Hunt.
+    Extract structured product data from HTML based on the source.
     
     Args:
-        category (str, optional): Product category to filter by
-        limit (int): Maximum number of products to return
+        html: The HTML content to extract data from
+        source: The source of the HTML (producthunt, g2, capterra, etc.)
+        
+    Returns:
+        List[Dict[str, Any]]: List of extracted product data
+    """
+    if html is None:
+        return []
+        
+    products = []
+    
+    if source == 'producthunt':
+        # Extract product data from Product Hunt
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Find product cards
+        product_cards = soup.select('div[data-test="post-item"]')
+        logger.info(f"Found {len(product_cards)} product cards on Product Hunt")
+        
+        for card in product_cards:
+            try:
+                # Extract product name
+                product_name_elem = card.select_one('h3')
+                product_name = product_name_elem.text.strip() if product_name_elem else "Unknown Product"
+                
+                # Extract product description
+                product_desc_elem = card.select_one('div[data-test="tagline"]')
+                product_description = product_desc_elem.text.strip() if product_desc_elem else ""
+                
+                # Extract product URL
+                product_url_elem = card.select_one('a[data-test="post-name"]')
+                product_url = "https://www.producthunt.com" + product_url_elem['href'] if product_url_elem and 'href' in product_url_elem.attrs else ""
+                
+                # Extract upvotes
+                upvotes_elem = card.select_one('div[data-test="vote-button"] span')
+                upvotes = int(upvotes_elem.text.strip()) if upvotes_elem and upvotes_elem.text.strip().isdigit() else 0
+                
+                # Extract topics (categories)
+                topics_elems = card.select('div[data-test="topic-name"]')
+                topics = [topic.text.strip() for topic in topics_elems]
+                
+                # Create product data dictionary
+                product_data = {
+                    'name': product_name,
+                    'description': product_description,
+                    'url': product_url,
+                    'source': 'Product Hunt',
+                    'popularity_score': min(upvotes / 100, 10),  # Normalize to 0-10 scale
+                    'category': topics[0] if topics else "Software",
+                    'feature_list': [],  # Will be populated with additional scraping
+                    'target_audience': "",  # Will be populated with additional scraping
+                    'pricing_model': ""  # Will be populated with additional scraping
+                }
+                
+                products.append(product_data)
+                
+            except Exception as e:
+                logger.warning(f"Error extracting product data from card: {e}")
+    
+    elif source == 'g2':
+        # Extract product data from G2
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Find product cards
+        product_cards = soup.select('div.product-card')
+        logger.info(f"Found {len(product_cards)} product cards on G2")
+        
+        for card in product_cards:
+            try:
+                # Extract product name
+                product_name_elem = card.select_one('h3.product-card__product-name')
+                product_name = product_name_elem.text.strip() if product_name_elem else "Unknown Product"
+                
+                # Extract product description
+                product_desc_elem = card.select_one('p.product-card__description')
+                product_description = product_desc_elem.text.strip() if product_desc_elem else ""
+                
+                # Extract product URL
+                product_url_elem = card.select_one('a.product-card__product-name-wrapper')
+                product_url = "https://www.g2.com" + product_url_elem['href'] if product_url_elem and 'href' in product_url_elem.attrs else ""
+                
+                # Extract rating
+                rating_elem = card.select_one('span.product-card__rating')
+                rating_text = rating_elem.text.strip() if rating_elem else "0.0"
+                try:
+                    rating = float(rating_text)
+                except ValueError:
+                    rating = 0.0
+                
+                # Extract category
+                category_elem = card.select_one('div.product-card__category')
+                category = category_elem.text.strip() if category_elem else "Software"
+                
+                # Create product data dictionary
+                product_data = {
+                    'name': product_name,
+                    'description': product_description,
+                    'url': product_url,
+                    'source': 'G2',
+                    'popularity_score': rating * 2,  # G2 uses 0-5 scale, convert to 0-10
+                    'category': category,
+                    'feature_list': [],  # Will be populated with additional scraping
+                    'target_audience': "",  # Will be populated with additional scraping
+                    'pricing_model': ""  # Will be populated with additional scraping
+                }
+                
+                products.append(product_data)
+                
+            except Exception as e:
+                logger.warning(f"Error extracting product data from G2 card: {e}")
+    
+    elif source == 'capterra':
+        # Extract product data from Capterra
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Find product cards
+        product_cards = soup.select('div.product-card')
+        logger.info(f"Found {len(product_cards)} product cards on Capterra")
+        
+        for card in product_cards:
+            try:
+                # Extract product name
+                product_name_elem = card.select_one('h2.product-card-name')
+                product_name = product_name_elem.text.strip() if product_name_elem else "Unknown Product"
+                
+                # Extract product description
+                product_desc_elem = card.select_one('div.product-description')
+                product_description = product_desc_elem.text.strip() if product_desc_elem else ""
+                
+                # Extract product URL
+                product_url_elem = card.select_one('a.product-card-name-wrapper')
+                product_url = "https://www.capterra.com" + product_url_elem['href'] if product_url_elem and 'href' in product_url_elem.attrs else ""
+                
+                # Extract rating
+                rating_elem = card.select_one('div.product-rating-value')
+                rating_text = rating_elem.text.strip() if rating_elem else "0.0"
+                try:
+                    rating = float(rating_text)
+                except ValueError:
+                    rating = 0.0
+                
+                # Extract category from breadcrumbs
+                category_elem = soup.select_one('li.active-breadcrumb-item')
+                category = category_elem.text.strip() if category_elem else "Software"
+                
+                # Create product data dictionary
+                product_data = {
+                    'name': product_name,
+                    'description': product_description,
+                    'url': product_url,
+                    'source': 'Capterra',
+                    'popularity_score': rating * 2,  # Capterra uses 0-5 scale, convert to 0-10
+                    'category': category,
+                    'feature_list': [],  # Will be populated with additional scraping
+                    'target_audience': "",  # Will be populated with additional scraping
+                    'pricing_model': ""  # Will be populated with additional scraping
+                }
+                
+                products.append(product_data)
+                
+            except Exception as e:
+                logger.warning(f"Error extracting product data from Capterra card: {e}")
+    
+    return products
+
+def extract_product_details(html: str, source: str, product_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract detailed product information from a product page.
+    
+    Args:
+        html: The HTML content of the product page
+        source: The source of the HTML (producthunt, g2, capterra, etc.)
+        product_data: The existing product data to enhance
+        
+    Returns:
+        Dict[str, Any]: Enhanced product data with additional details
+    """
+    if html is None:
+        return product_data
+    
+    enhanced_data = product_data.copy()
+    
+    if source == 'producthunt':
+        # Extract detailed product data from Product Hunt
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Extract features
+        feature_list = []
+        feature_elems = soup.select('div.styles_bulletPoint__IZS9J')
+        for feature in feature_elems:
+            feature_text = feature.text.strip()
+            if feature_text:
+                feature_list.append(feature_text)
+        
+        if feature_list:
+            enhanced_data['feature_list'] = feature_list
+        
+        # Extract pricing information
+        pricing_elem = soup.select_one('span:contains("Pricing")')
+        if pricing_elem:
+            pricing_section = pricing_elem.find_parent('div')
+            if pricing_section:
+                pricing_text = pricing_section.text.strip()
+                if "Free" in pricing_text:
+                    enhanced_data['pricing_model'] = "Free"
+                elif "Freemium" in pricing_text:
+                    enhanced_data['pricing_model'] = "Freemium"
+                elif "Paid" in pricing_text:
+                    enhanced_data['pricing_model'] = "Paid"
+                else:
+                    enhanced_data['pricing_model'] = pricing_text
+        
+    elif source == 'g2':
+        # Extract detailed product data from G2
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Extract features
+        feature_list = []
+        feature_elems = soup.select('div.feature-overview__feature')
+        for feature in feature_elems:
+            feature_text = feature.text.strip()
+            if feature_text:
+                feature_list.append(feature_text)
+        
+        if feature_list:
+            enhanced_data['feature_list'] = feature_list
+        
+        # Extract pricing information
+        pricing_elem = soup.select_one('span.product-content__pricing-text')
+        if pricing_elem:
+            pricing_text = pricing_elem.text.strip()
+            enhanced_data['pricing_model'] = pricing_text
+        
+        # Extract target audience
+        audience_elem = soup.select_one('div.product-content__buyer-types')
+        if audience_elem:
+            audience_text = audience_elem.text.strip()
+            enhanced_data['target_audience'] = audience_text
+    
+    elif source == 'capterra':
+        # Extract detailed product data from Capterra
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Extract features
+        feature_list = []
+        feature_elems = soup.select('li.expandable-list__item')
+        for feature in feature_elems:
+            feature_text = feature.text.strip()
+            if feature_text:
+                feature_list.append(feature_text)
+        
+        if feature_list:
+            enhanced_data['feature_list'] = feature_list
+        
+        # Extract pricing information
+        pricing_elem = soup.select_one('div.pricing-band')
+        if pricing_elem:
+            pricing_text = pricing_elem.text.strip()
+            if "Free" in pricing_text:
+                enhanced_data['pricing_model'] = "Free"
+            elif "Free Trial" in pricing_text:
+                enhanced_data['pricing_model'] = "Free Trial"
+            elif "Starting from" in pricing_text:
+                enhanced_data['pricing_model'] = "Paid"
+            else:
+                enhanced_data['pricing_model'] = pricing_text
+        
+        # Extract target audience
+        audience_elem = soup.select_one('div.product-market-focus')
+        if audience_elem:
+            audience_text = audience_elem.text.strip()
+            enhanced_data['target_audience'] = audience_text
+    
+    return enhanced_data
+
+def search_producthunt(category: str, max_products: int = 10) -> List[Dict[str, Any]]:
+    """
+    Search Product Hunt for products in a specific category.
+    
+    Args:
+        category: The category to search for
+        max_products: Maximum number of products to return
+        
+    Returns:
+        List[Dict[str, Any]]: List of discovered products
+    """
+    logger.info(f"Searching Product Hunt for {category} products")
+    
+    # Construct the search URL
+    category_slug = category.lower().replace(' ', '-')
+    search_url = f"https://www.producthunt.com/topics/{category_slug}"
+    
+    # Fetch the search page
+    html = fetch_url(search_url)
+    if html is None:
+        logger.warning(f"Failed to fetch Product Hunt search results for {category}")
+        return []
+    
+    # Extract product data from the search results
+    products = extract_structured_product_data(html, 'producthunt')
+    
+    # Limit the number of products
+    products = products[:max_products]
+    
+    # Enhance products with additional details
+    enhanced_products = []
+    for product in products:
+        if product['url']:
+            logger.info(f"Fetching details for {product['name']} from Product Hunt")
+            product_html = fetch_url(product['url'])
+            if product_html:
+                enhanced_product = extract_product_details(product_html, 'producthunt', product)
+                enhanced_products.append(enhanced_product)
+                # Be nice to the server
+                time.sleep(random.uniform(1, 3))
+            else:
+                enhanced_products.append(product)
+        else:
+            enhanced_products.append(product)
+    
+    return enhanced_products
+
+def search_g2(category: str, max_products: int = 10) -> List[Dict[str, Any]]:
+    """
+    Search G2 for products in a specific category.
+    
+    Args:
+        category: The category to search for
+        max_products: Maximum number of products to return
+        
+    Returns:
+        List[Dict[str, Any]]: List of discovered products
+    """
+    logger.info(f"Searching G2 for {category} products")
+    
+    # Construct the search URL
+    category_slug = category.lower().replace(' ', '-')
+    search_url = f"https://www.g2.com/categories/{category_slug}"
+    
+    # Fetch the search page
+    html = fetch_url(search_url)
+    if html is None:
+        logger.warning(f"Failed to fetch G2 search results for {category}")
+        return []
+    
+    # Extract product data from the search results
+    products = extract_structured_product_data(html, 'g2')
+    
+    # Limit the number of products
+    products = products[:max_products]
+    
+    # Enhance products with additional details
+    enhanced_products = []
+    for product in products:
+        if product['url']:
+            logger.info(f"Fetching details for {product['name']} from G2")
+            product_html = fetch_url(product['url'])
+            if product_html:
+                enhanced_product = extract_product_details(product_html, 'g2', product)
+                enhanced_products.append(enhanced_product)
+                # Be nice to the server
+                time.sleep(random.uniform(1, 3))
+            else:
+                enhanced_products.append(product)
+        else:
+            enhanced_products.append(product)
+    
+    return enhanced_products
+
+def search_capterra(category: str, max_products: int = 10) -> List[Dict[str, Any]]:
+    """
+    Search Capterra for products in a specific category.
+    
+    Args:
+        category: The category to search for
+        max_products: Maximum number of products to return
+        
+    Returns:
+        List[Dict[str, Any]]: List of discovered products
+    """
+    logger.info(f"Searching Capterra for {category} products")
+    
+    # Construct the search URL
+    category_slug = category.lower().replace(' ', '-')
+    search_url = f"https://www.capterra.com/p/browse/{category_slug}"
+    
+    # Fetch the search page
+    html = fetch_url(search_url)
+    if html is None:
+        logger.warning(f"Failed to fetch Capterra search results for {category}")
+        return []
+    
+    # Extract product data from the search results
+    products = extract_structured_product_data(html, 'capterra')
+    
+    # Limit the number of products
+    products = products[:max_products]
+    
+    # Enhance products with additional details
+    enhanced_products = []
+    for product in products:
+        if product['url']:
+            logger.info(f"Fetching details for {product['name']} from Capterra")
+            product_html = fetch_url(product['url'])
+            if product_html:
+                enhanced_product = extract_product_details(product_html, 'capterra', product)
+                enhanced_products.append(enhanced_product)
+                # Be nice to the server
+                time.sleep(random.uniform(1, 3))
+            else:
+                enhanced_products.append(product)
+        else:
+            enhanced_products.append(product)
+    
+    return enhanced_products
+
+def search_reddit(category: str, max_posts: int = 10) -> List[Dict[str, Any]]:
+    """
+    Search Reddit for discussions about products in a specific category.
+    
+    Args:
+        category: The category to search for
+        max_posts: Maximum number of posts to return
+        
+    Returns:
+        List[Dict[str, Any]]: List of relevant Reddit posts
+    """
+    logger.info(f"Searching Reddit for discussions about {category} software")
+    
+    # Construct the search URL
+    search_term = f"best {category} software"
+    search_url = f"https://www.reddit.com/search/?q={urllib.parse.quote(search_term)}"
+    
+    # Fetch the search page
+    html = fetch_url(search_url)
+    if html is None:
+        logger.warning(f"Failed to fetch Reddit search results for {search_term}")
+        return []
+    
+    # Extract post data from the search results
+    posts = []
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # Find post cards
+    post_cards = soup.select('div[data-testid="post-container"]')
+    logger.info(f"Found {len(post_cards)} post cards on Reddit")
+    
+    for card in post_cards[:max_posts]:
+        try:
+            # Extract post title
+            title_elem = card.select_one('h3')
+            title = title_elem.text.strip() if title_elem else "Unknown Post"
+            
+            # Extract post URL
+            url_elem = card.select_one('a[data-click-id="body"]')
+            url = "https://www.reddit.com" + url_elem['href'] if url_elem and 'href' in url_elem.attrs else ""
+            
+            # Extract subreddit
+            subreddit_elem = card.select_one('a[data-click-id="subreddit"]')
+            subreddit = subreddit_elem.text.strip() if subreddit_elem else ""
+            
+            # Extract post date
+            date_elem = card.select_one('span[data-click-id="timestamp"]')
+            date = date_elem.text.strip() if date_elem else ""
+            
+            # Create post data dictionary
+            post_data = {
+                'title': title,
+                'url': url,
+                'subreddit': subreddit,
+                'date': date,
+                'content': ""  # Will be populated with additional scraping
+            }
+            
+            # Only include posts that actually link to Reddit discussions
+            if url and 'reddit.com' in url and '/search?' not in url:
+                posts.append(post_data)
+            
+        except Exception as e:
+            logger.warning(f"Error extracting post data from Reddit card: {e}")
+    
+    # Enhance posts with content
+    enhanced_posts = []
+    for post in posts:
+        if post['url']:
+            logger.info(f"Fetching content for Reddit post: {post['title']}")
+            post_html = fetch_url(post['url'])
+            if post_html:
+                # Extract the post content
+                soup = BeautifulSoup(post_html, 'html.parser')
+                content_elem = soup.select_one('div[data-click-id="text"] div')
+                if content_elem:
+                    post['content'] = content_elem.text.strip()
+                
+                # Extract comments to find product mentions
+                product_mentions = []
+                comment_elems = soup.select('div[data-testid="comment"]')
+                for comment in comment_elems:
+                    comment_text = comment.text.strip()
+                    # Look for common patterns that might indicate product mentions
+                    if "I use" in comment_text or "I recommend" in comment_text or "best tool" in comment_text:
+                        product_mentions.append(comment_text)
+                
+                post['product_mentions'] = product_mentions[:5]  # Limit to top 5 mentions
+                enhanced_posts.append(post)
+                # Be nice to the server
+                time.sleep(random.uniform(1, 3))
+            else:
+                enhanced_posts.append(post)
+        else:
+            enhanced_posts.append(post)
+    
+    return enhanced_posts
+
+def discover_trending_products(category: str, sources: Optional[List[str]] = None, 
+                               max_products_per_source: int = 5) -> List[Dict[str, Any]]:
+    """
+    Discover trending products across multiple sources.
+    
+    Args:
+        category: The category to search for
+        sources: List of sources to search (producthunt, g2, capterra, reddit)
+        max_products_per_source: Maximum number of products to return per source
+        
+    Returns:
+        List[Dict[str, Any]]: List of discovered products
+    """
+    if sources is None:
+        sources = ["producthunt", "g2", "capterra"]
+    
+    all_products = []
+    
+    for source in sources:
+        try:
+            if source == "producthunt":
+                products = search_producthunt(category, max_products_per_source)
+            elif source == "g2":
+                products = search_g2(category, max_products_per_source)
+            elif source == "capterra":
+                products = search_capterra(category, max_products_per_source)
+            elif source == "reddit":
+                # Reddit posts require different handling
+                posts = search_reddit(category, max_products_per_source)
+                # We don't include Reddit posts directly in the product list
+                # Instead, we could use them for sentiment analysis or additional insights
+                continue
+            else:
+                logger.warning(f"Unknown source: {source}")
+                continue
+                
+            logger.info(f"Discovered {len(products)} products from {source}")
+            all_products.extend(products)
+            
+        except Exception as e:
+            logger.error(f"Error discovering products from {source}: {e}")
+    
+    # If we couldn't fetch any products, use sample data
+    if not all_products:
+        logger.info("No products discovered from sources. Using API data sources for products")
+        try:
+            # Use sample products from data directory
+            sample_path = "data/sample_products.json"
+            if os.path.exists(sample_path):
+                with open(sample_path, 'r', encoding='utf-8') as f:
+                    sample_products = json.load(f)
+                
+                # Filter by category if needed
+                if category:
+                    sample_products = [p for p in sample_products if p.get("category", "").lower() == category.lower()]
+                
+                all_products = sample_products
+                logger.info(f"Loaded {len(all_products)} sample products from {sample_path}")
+        except Exception as e:
+            logger.error(f"Error loading sample products: {e}")
+    
+    # Remove duplicates based on product name
+    unique_products = {}
+    for product in all_products:
+        product_name = product['name'].lower()
+        if product_name not in unique_products or unique_products[product_name]['description'] == "":
+            unique_products[product_name] = product
+    
+    return list(unique_products.values())
+
+def save_discovered_products(products: List[Dict[str, Any]], output_file: str) -> None:
+    """
+    Save discovered products to a JSON file.
+    
+    Args:
+        products: List of product data dictionaries
+        output_file: Path to the output file
+    """
+    # Create directories if they don't exist
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    
+    # Save the products to a JSON file
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(products, f, indent=2, ensure_ascii=False)
+    
+    logger.info(f"Saved {len(products)} products to {output_file}")
+
+def load_discovered_products(input_file: str) -> List[Dict[str, Any]]:
+    """
+    Load discovered products from a JSON file.
+    
+    Args:
+        input_file: Path to the input file
         
     Returns:
         List[Dict[str, Any]]: List of product data dictionaries
     """
-    # First try to scrape from Product Hunt
-    try:
-        url = "https://www.producthunt.com/"
-        if category:
-            url += f"topics/{category}"
-            
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        products = []
-        
-        # Extract product information (this is a simplified version)
-        # Product Hunt's structure may change, so this might need updates
-        product_elements = soup.select('.styles_item__Dk_Sm')[:limit]
-        
-        for element in product_elements:
-            try:
-                name_element = element.select_one('.styles_title__jWi91')
-                desc_element = element.select_one('.styles_tagline__tSQhI')
-                
-                product = {
-                    "name": name_element.text.strip() if name_element else "Unknown",
-                    "description": desc_element.text.strip() if desc_element else "",
-                    "url": "https://www.producthunt.com" + element.select_one('a')['href'] if element.select_one('a') else "",
-                    "source": "Product Hunt"
-                }
-                products.append(product)
-            except Exception as e:
-                logging.warning(f"Error extracting product data: {e}")
-                
-        if products:
-            return products
-    except Exception as e:
-        logging.warning(f"Error scraping Product Hunt: {e}")
-    
-    # If product hunt scraping failed or returned no products, use our API-sourced data
-    logging.info("Using API data sources for products")
-    
-    # Return category-specific example products
-    product_examples = {
-        "productivity": [
-            {
-                "name": "Notion",
-                "description": "All-in-one workspace for notes, docs, wikis, projects, and team collaboration",
-                "url": "https://www.notion.so",
-                "source": "API"
-            },
-            {
-                "name": "Trello",
-                "description": "Flexible and visual project management tool for teams",
-                "url": "https://trello.com",
-                "source": "API"
-            },
-            {
-                "name": "Asana",
-                "description": "Work management platform for teams",
-                "url": "https://asana.com",
-                "source": "API"
-            },
-            {
-                "name": "ClickUp",
-                "description": "All-in-one productivity platform for tasks, docs, goals, and chat",
-                "url": "https://clickup.com",
-                "source": "API"
-            },
-            {
-                "name": "Todoist",
-                "description": "Task management app for personal and team productivity",
-                "url": "https://todoist.com",
-                "source": "API"
-            }
-        ],
-        "marketing": [
-            {
-                "name": "HubSpot",
-                "description": "Marketing, sales, and service platform to grow your business",
-                "url": "https://www.hubspot.com",
-                "source": "API"
-            },
-            {
-                "name": "Mailchimp",
-                "description": "Marketing automation platform for email marketing",
-                "url": "https://mailchimp.com",
-                "source": "API"
-            },
-            {
-                "name": "Buffer",
-                "description": "Social media management platform for brands",
-                "url": "https://buffer.com",
-                "source": "API"
-            },
-            {
-                "name": "Ahrefs",
-                "description": "SEO tools to grow your search traffic and research competitors",
-                "url": "https://ahrefs.com",
-                "source": "API"
-            },
-            {
-                "name": "Canva",
-                "description": "Design platform for marketing materials and social media content",
-                "url": "https://www.canva.com",
-                "source": "API"
-            }
-        ],
-        "ai": [
-            {
-                "name": "ChatGPT",
-                "description": "AI language model for natural conversations and text generation",
-                "url": "https://chat.openai.com",
-                "source": "API"
-            },
-            {
-                "name": "Jasper",
-                "description": "AI content platform for marketing teams",
-                "url": "https://jasper.ai",
-                "source": "API"
-            },
-            {
-                "name": "Midjourney",
-                "description": "AI-powered image generation from text descriptions",
-                "url": "https://midjourney.com",
-                "source": "API"
-            },
-            {
-                "name": "Anthropic Claude",
-                "description": "AI assistant focused on helpfulness, harmlessness, and honesty",
-                "url": "https://anthropic.com",
-                "source": "API"
-            },
-            {
-                "name": "Whisper",
-                "description": "AI-based speech recognition system with high accuracy",
-                "url": "https://openai.com/research/whisper",
-                "source": "API"
-            }
-        ],
-    }
-    
-    # Default to productivity if category not found
-    selected_category = category if category in product_examples else "productivity"
-    return product_examples[selected_category][:limit]
-
-def scrape_g2_reviews(product_slug: str, limit: int = 20) -> List[Dict[str, Any]]:
-    """
-    Scrape G2 reviews for a specific product.
-    
-    Args:
-        product_slug (str): The G2 product slug (e.g., 'slack', 'asana')
-        limit (int): Maximum number of reviews to return
-        
-    Returns:
-        List[Dict[str, Any]]: List of review data dictionaries
-    """
-    url = f"https://www.g2.com/products/{product_slug}/reviews"
-    
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        reviews = []
-        
-        # Extract review information
-        review_elements = soup.select('.review')[:limit]
-        
-        for element in review_elements:
-            try:
-                title_element = element.select_one('.review__title')
-                content_element = element.select_one('.review__content')
-                rating_element = element.select_one('.stars')
-                
-                # Extract rating (e.g., "4.5 out of 5")
-                rating_text = rating_element.get('aria-label', '') if rating_element else ""
-                rating_match = re.search(r'(\d+(\.\d+)?)', rating_text)
-                rating = float(rating_match.group(1)) if rating_match else None
-                
-                review = {
-                    "title": title_element.text.strip() if title_element else "Untitled Review",
-                    "content": content_element.text.strip() if content_element else "",
-                    "rating": rating,
-                    "url": url,
-                    "source": "G2"
-                }
-                reviews.append(review)
-            except Exception as e:
-                logging.warning(f"Error extracting review data: {e}")
-                
-        return reviews
-    except Exception as e:
-        logging.error(f"Error scraping G2 reviews: {e}")
+    if not os.path.exists(input_file):
+        logger.warning(f"Input file {input_file} does not exist")
         return []
-
-def extract_domain(url: str) -> str:
-    """Extract the domain name from a URL"""
-    parsed_url = urlparse(url)
-    domain = parsed_url.netloc
-    
-    # Remove 'www.' if present
-    if domain.startswith('www.'):
-        domain = domain[4:]
-        
-    return domain
-
-def find_reddit_discussions(product_name: str, limit: int = 5) -> List[Dict[str, Any]]:
-    """
-    Find Reddit discussions about a specific product.
-    
-    Args:
-        product_name (str): The name of the product to search for
-        limit (int): Maximum number of discussions to return
-        
-    Returns:
-        List[Dict[str, Any]]: List of discussion data dictionaries
-    """
-    search_url = f"https://www.google.com/search?q=site:reddit.com+{product_name}+review+OR+alternative+OR+problem"
     
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        response = requests.get(search_url, headers=headers)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        discussions = []
-        
-        # Extract Reddit links from Google search results
-        for result in soup.select('a'):
-            href = result.get('href', '')
-            if 'reddit.com' in href and '/search?' not in href:
-                # Extract actual URL from Google redirect URL
-                match = re.search(r'(?:url\?q=)(.*?)(?:&sa=)', href)
-                if match:
-                    url = match.group(1)
-                    if '/comments/' in url and len(discussions) < limit:
-                        discussions.append({
-                            "url": url,
-                            "source": "Reddit",
-                            "product": product_name
-                        })
-        
-        return discussions
-    except Exception as e:
-        logging.error(f"Error finding Reddit discussions: {e}")
+        with open(input_file, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+        logger.info(f"Loaded {len(products)} products from {input_file}")
+        return products
+    except json.JSONDecodeError as e:
+        logger.error(f"Error loading products from {input_file}: {e}")
         return []

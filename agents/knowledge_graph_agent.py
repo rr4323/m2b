@@ -1,439 +1,312 @@
 """
-Knowledge Graph Agent for enhancing SaaS product analysis and recommendations.
+Knowledge Graph Agent for interacting with the SaaS knowledge graph.
 """
 import logging
 from typing import Dict, Any, List, Optional
 
 from agents.base_agent import BaseAgent
-from utils.knowledge_graph import create_knowledge_graph, SaaSKnowledgeGraph
-from utils.openai_utils import generate_json_completion
-
+from utils.knowledge_graph import knowledge_graph
+from utils.openai_utils import generate_json_completion, generate_completion
 
 class KnowledgeGraphAgent(BaseAgent):
-    """
-    Agent for maintaining and querying a knowledge graph of SaaS products.
-    This agent enhances the system's ability to analyze relationships between
-    products, features, and market trends.
-    """
+    """Agent for interacting with the SaaS knowledge graph."""
     
     def __init__(self):
         """Initialize the Knowledge Graph Agent."""
         super().__init__(
             name="Knowledge Graph Agent",
-            description="Manages and analyzes SaaS product knowledge graph"
+            description="Interacts with the SaaS knowledge graph"
         )
-        # Initialize the knowledge graph
-        self.knowledge_graph = create_knowledge_graph()
-        
+        self.kg = knowledge_graph
+    
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Run the knowledge graph process to analyze and enhance product recommendations.
+        Run the knowledge graph process.
         
         Args:
-            input_data (Dict[str, Any]): Input data containing products and analysis requirements
+            input_data (Dict[str, Any]): Input data for the knowledge graph process
                 
         Returns:
-            Dict[str, Any]: Enhanced analysis and recommendations based on knowledge graph
+            Dict[str, Any]: The results of the knowledge graph process
         """
-        self.log_info("Starting knowledge graph analysis process")
+        self.log_info("Starting knowledge graph process")
         
-        operation = input_data.get("operation", "analyze")
+        # Extract the operation to perform
+        operation = input_data.get("operation", "")
         
-        if operation == "add_product":
-            product_data = input_data.get("product_data", {})
-            return await self._add_product_to_graph(product_data)
-        
-        elif operation == "add_multiple_products":
-            products_data = input_data.get("products_data", [])
-            return await self._add_multiple_products(products_data)
-        
-        elif operation == "analyze_product":
-            product_name = input_data.get("product_name", "")
-            return await self._analyze_product(product_name)
-        
-        elif operation == "find_enhancement_opportunities":
-            product_name = input_data.get("product_name", "")
-            return await self._find_enhancement_opportunities(product_name)
-        
-        elif operation == "visualize":
-            return await self._visualize_graph()
-        
-        elif operation == "market_analysis":
-            category = input_data.get("category", None)
-            return await self._analyze_market(category)
-        
-        else:
-            self.log_error(f"Unknown operation: {operation}")
-            return {"error": f"Unknown operation: {operation}"}
-    
-    async def _add_product_to_graph(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Add a product to the knowledge graph.
-        
-        Args:
-            product_data (Dict[str, Any]): Data about the product to add
+        if operation == "build_graph":
+            # Extract product data
+            products = input_data.get("products", [])
+            gaps = input_data.get("gaps", [])
             
-        Returns:
-            Dict[str, Any]: Status of the operation
-        """
-        try:
-            product_name = self.knowledge_graph.add_product(product_data)
-            self.log_info(f"Added product to knowledge graph: {product_name}")
-            return {
-                "status": "success",
-                "product_name": product_name,
-                "message": f"Successfully added {product_name} to the knowledge graph"
-            }
-        except Exception as e:
-            self.log_error(f"Error adding product to knowledge graph: {e}")
-            return {
-                "status": "error",
-                "message": f"Failed to add product to knowledge graph: {str(e)}"
-            }
-    
-    async def _add_multiple_products(self, products_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Add multiple products to the knowledge graph.
-        
-        Args:
-            products_data (List[Dict[str, Any]]): List of product data dictionaries
+            # Process products and gaps to build the graph
+            result = await self._build_knowledge_graph(products, gaps)
             
-        Returns:
-            Dict[str, Any]: Status of the operation
-        """
-        try:
-            added_ids = self.knowledge_graph.bulk_add_products(products_data)
-            self.log_info(f"Added {len(added_ids)} products to knowledge graph")
-            return {
-                "status": "success",
-                "added_count": len(added_ids),
-                "added_products": added_ids,
-                "message": f"Successfully added {len(added_ids)} products to the knowledge graph"
-            }
-        except Exception as e:
-            self.log_error(f"Error adding multiple products to knowledge graph: {e}")
-            return {
-                "status": "error",
-                "message": f"Failed to add products to knowledge graph: {str(e)}"
-            }
-    
-    async def _analyze_product(self, product_name: str) -> Dict[str, Any]:
-        """
-        Analyze a product using the knowledge graph.
-        
-        Args:
-            product_name (str): Name of the product to analyze
-            
-        Returns:
-            Dict[str, Any]: Analysis results
-        """
-        if not product_name:
-            return {"error": "Product name is required"}
-        
-        try:
-            # Get product features
-            features = self.knowledge_graph.get_product_features(product_name)
-            
-            # Get competitors
-            competitors = self.knowledge_graph.get_competitive_products(product_name)
-            
-            # Find missing features compared to competitors
-            missing_features = self.knowledge_graph.find_missing_features(product_name)
-            
+        elif operation == "query_similar_products":
             # Find similar products
-            similar_products = self.knowledge_graph.find_similar_products(product_name)
+            product_id = input_data.get("product_id", "")
+            result = await self._find_similar_products(product_id)
             
-            self.log_info(f"Completed knowledge graph analysis for {product_name}")
+        elif operation == "identify_gaps":
+            # Identify gaps in products
+            result = await self._identify_potential_gaps(input_data.get("min_products", 2))
             
-            return {
-                "product_name": product_name,
-                "features": features,
-                "competitors": competitors,
-                "missing_features": missing_features,
-                "similar_products": similar_products
-            }
-        except Exception as e:
-            self.log_error(f"Error analyzing product {product_name}: {e}")
-            return {
-                "status": "error",
-                "message": f"Failed to analyze product {product_name}: {str(e)}"
-            }
-    
-    async def _find_enhancement_opportunities(self, product_name: str) -> Dict[str, Any]:
-        """
-        Find enhancement opportunities for a product using the knowledge graph.
-        
-        Args:
-            product_name (str): Name of the product
+        elif operation == "analyze_product":
+            # Analyze a product in detail
+            product_id = input_data.get("product_id", "")
+            result = await self._analyze_product(product_id)
             
-        Returns:
-            Dict[str, Any]: Enhancement opportunities
-        """
-        if not product_name:
-            return {"error": "Product name is required"}
-        
-        try:
-            # Get basic product analysis
-            analysis = await self._analyze_product(product_name)
+        elif operation == "visualize":
+            # Visualize the knowledge graph
+            result = {"visualization_path": self.kg.visualize()}
             
-            if "status" in analysis and analysis["status"] == "error":
-                return analysis
+        elif operation == "export":
+            # Export the knowledge graph
+            result = {"graph_data": self.kg.export_to_json()}
             
-            # Prepare data for AI enhancement
-            features = analysis.get("features", [])
-            missing_features = analysis.get("missing_features", {})
-            competitors = analysis.get("competitors", [])
-            
-            # Flatten missing features for easier processing
-            all_missing_features = []
-            for competitor, features_list in missing_features.items():
-                all_missing_features.extend(features_list)
-            
-            # Remove duplicates
-            all_missing_features = list(set(all_missing_features))
-            
-            # Find popular features across similar products
-            popular_features = self.knowledge_graph.find_popular_features()
-            popular_feature_names = [f for f, _ in popular_features]
-            
-            # Combine all data for AI analysis
-            enhancement_data = {
-                "product_name": product_name,
-                "current_features": features,
-                "missing_features": all_missing_features,
-                "popular_features": popular_feature_names,
-                "competitor_count": len(competitors)
-            }
-            
-            # Use AI to generate enhancement recommendations
-            opportunities = await self._generate_enhancement_recommendations(enhancement_data)
-            
-            self.log_info(f"Generated enhancement opportunities for {product_name}")
-            
-            return {
-                "product_name": product_name,
-                "enhancement_opportunities": opportunities,
-                "knowledge_graph_analysis": analysis
-            }
-        except Exception as e:
-            self.log_error(f"Error finding enhancement opportunities for {product_name}: {e}")
-            return {
-                "status": "error",
-                "message": f"Failed to find enhancement opportunities for {product_name}: {str(e)}"
-            }
-    
-    async def _generate_enhancement_recommendations(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Generate enhancement recommendations using AI.
-        
-        Args:
-            data (Dict[str, Any]): Data about the product and its features
-            
-        Returns:
-            Dict[str, Any]: Enhancement recommendations
-        """
-        try:
-            product_name = data.get("product_name", "")
-            current_features = data.get("current_features", [])
-            missing_features = data.get("missing_features", [])
-            popular_features = data.get("popular_features", [])
-            
-            # Prepare the prompt for the AI
-            system_message = (
-                "You are a SaaS product expert who specializes in identifying enhancement opportunities "
-                "based on market analysis and competitor research. Given information about a product, "
-                "its current features, and features it's missing compared to competitors, recommend "
-                "specific enhancements that would make the product more competitive and innovative."
-            )
-            
-            prompt = (
-                f"Product: {product_name}\n\n"
-                f"Current Features:\n"
-                + "\n".join([f"- {feature}" for feature in current_features])
-                + "\n\n"
-                f"Features Missing Compared to Competitors:\n"
-                + "\n".join([f"- {feature}" for feature in missing_features])
-                + "\n\n"
-                f"Popular Features in Similar Products:\n"
-                + "\n".join([f"- {feature}" for feature in popular_features])
-                + "\n\n"
-                "Based on this analysis from our knowledge graph, provide enhancement recommendations in the following categories:\n"
-                "1. Must-Have Features - Essential features the product should implement to remain competitive\n"
-                "2. Innovative Differentiators - Unique features that could set this product apart from competitors\n"
-                "3. User Experience Improvements - Enhancements to make the product more user-friendly\n"
-                "4. Technical Enhancements - Backend or architectural improvements\n"
-                "5. Integration Opportunities - Potential integrations with other services\n\n"
-                "Provide your recommendations in a structured JSON format with these categories as keys, "
-                "and a list of specific, actionable recommendations for each category."
-            )
-            
-            # Generate recommendations using the AI
-            recommendations_structure = {
-                "must_have_features": ["Feature 1", "Feature 2"],
-                "innovative_differentiators": ["Differentiator 1", "Differentiator 2"],
-                "user_experience_improvements": ["Improvement 1", "Improvement 2"],
-                "technical_enhancements": ["Enhancement 1", "Enhancement 2"],
-                "integration_opportunities": ["Integration 1", "Integration 2"]
-            }
-            
-            try:
-                recommendations = generate_json_completion(prompt, system_message)
-                
-                # Default recommendations if API fails
-                if not recommendations or "error" in recommendations:
-                    self.log_warning("AI API failed, using basic recommendations")
-                    return self._get_default_recommendations(data)
-                
-                return recommendations
-            except Exception as e:
-                self.log_error(f"Error generating AI recommendations: {e}")
-                return self._get_default_recommendations(data)
-            
-        except Exception as e:
-            self.log_error(f"Error in enhancement recommendation generation: {e}")
-            return {
-                "must_have_features": ["Error generating recommendations"],
-                "innovative_differentiators": [],
-                "user_experience_improvements": [],
-                "technical_enhancements": [],
-                "integration_opportunities": []
-            }
-    
-    def _get_default_recommendations(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Generate default recommendations when AI is unavailable.
-        
-        Args:
-            data (Dict[str, Any]): Data about the product and its features
-            
-        Returns:
-            Dict[str, Any]: Default enhancement recommendations
-        """
-        product_name = data.get("product_name", "").lower()
-        missing_features = data.get("missing_features", [])
-        
-        # Select the top 3 missing features
-        top_missing = missing_features[:3] if len(missing_features) >= 3 else missing_features
-        
-        # Basic recommendations based on product name keywords
-        if "task" in product_name or "project" in product_name or "management" in product_name:
-            return {
-                "must_have_features": top_missing + ["Advanced filtering and sorting", "Customizable dashboards"],
-                "innovative_differentiators": ["AI task prioritization", "Predictive deadline estimation"],
-                "user_experience_improvements": ["Simplified task creation flow", "Keyboard shortcuts for common actions"],
-                "technical_enhancements": ["Offline mode support", "Faster synchronization between devices"],
-                "integration_opportunities": ["Calendar integration", "Email integration for task creation"]
-            }
-        elif "document" in product_name or "note" in product_name or "wiki" in product_name:
-            return {
-                "must_have_features": top_missing + ["Real-time collaboration", "Version history"],
-                "innovative_differentiators": ["AI-powered content suggestions", "Semantic knowledge graph"],
-                "user_experience_improvements": ["Distraction-free writing mode", "Customizable formatting options"],
-                "technical_enhancements": ["Faster document loading", "Better conflict resolution"],
-                "integration_opportunities": ["Integration with reference management tools", "Export to multiple formats"]
-            }
-        elif "chat" in product_name or "communication" in product_name or "messaging" in product_name:
-            return {
-                "must_have_features": top_missing + ["Message threading", "Read receipts"],
-                "innovative_differentiators": ["AI message summarization", "Sentiment analysis for team health"],
-                "user_experience_improvements": ["Simplified file sharing", "Better notification management"],
-                "technical_enhancements": ["End-to-end encryption", "Improved search functionality"],
-                "integration_opportunities": ["Integration with project management tools", "Calendar integration for scheduling"]
-            }
-        elif "analytics" in product_name or "data" in product_name or "metrics" in product_name:
-            return {
-                "must_have_features": top_missing + ["Custom report builder", "Scheduled reports"],
-                "innovative_differentiators": ["AI-powered insight generation", "Anomaly detection"],
-                "user_experience_improvements": ["Simplified dashboard creation", "Mobile-optimized views"],
-                "technical_enhancements": ["Faster query processing", "Better data compression"],
-                "integration_opportunities": ["CRM data integration", "Marketing platform integrations"]
-            }
         else:
-            # Generic recommendations
-            return {
-                "must_have_features": top_missing + ["User management", "Customizable dashboard"],
-                "innovative_differentiators": ["AI-powered assistance", "Personalized user experience"],
-                "user_experience_improvements": ["Simplified onboarding", "Dark mode support"],
-                "technical_enhancements": ["Improved performance", "Better mobile responsiveness"],
-                "integration_opportunities": ["API for third-party integrations", "Single Sign-On (SSO) support"]
-            }
-    
-    async def _visualize_graph(self) -> Dict[str, Any]:
-        """
-        Generate a visualization of the knowledge graph.
+            self.log_warning(f"Unknown operation: {operation}")
+            result = {"error": f"Unknown operation: {operation}"}
         
-        Returns:
-            Dict[str, Any]: Status and path to the visualization
-        """
-        try:
-            output_file = self.knowledge_graph.visualize()
-            self.log_info(f"Generated knowledge graph visualization: {output_file}")
-            return {
-                "status": "success",
-                "visualization_path": output_file,
-                "message": "Successfully generated knowledge graph visualization"
-            }
-        except Exception as e:
-            self.log_error(f"Error visualizing knowledge graph: {e}")
-            return {
-                "status": "error",
-                "message": f"Failed to visualize knowledge graph: {str(e)}"
-            }
+        self.log_info("Completed knowledge graph process")
+        return result
     
-    async def _analyze_market(self, category: Optional[str] = None) -> Dict[str, Any]:
+    async def _build_knowledge_graph(self, products: List[Dict[str, Any]], 
+                                    gaps: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
-        Analyze the market using the knowledge graph.
+        Build a knowledge graph from products and gaps.
         
         Args:
-            category (Optional[str]): Optional category to focus the analysis on
-            
+            products: List of product data dictionaries
+            gaps: Optional list of gap data dictionaries
+                
         Returns:
-            Dict[str, Any]: Market analysis results
+            Dict[str, Any]: Information about the built knowledge graph
         """
-        try:
-            # Get products by category
-            if category is not None:
-                products = self.knowledge_graph.get_products_by_category(category)
-                category_name = category
-            else:
-                # Get all products
-                products = []
-                for node, attrs in self.knowledge_graph.graph.nodes(data=True):
-                    if attrs.get('node_type') == 'Product':
-                        products.append({
-                            'name': node,
-                            **{k: v for k, v in attrs.items() if k != 'name'}
-                        })
-                category_name = "All Categories"
+        # Add all products to the graph
+        product_ids = []
+        for product in products:
+            product_id = self.kg.add_product(product)
+            product_ids.append(product_id)
+        
+        # Add all gaps to the graph
+        gap_ids = []
+        if gaps:
+            for gap in gaps:
+                # For each gap, determine which products it might be related to
+                related_products = []
+                if "product_name" in gap:
+                    # If the gap specifies a product name, find the corresponding product
+                    product_name = gap["product_name"].lower().replace(" ", "_")
+                    for product_id in product_ids:
+                        if product_name in product_id:
+                            related_products.append(product_id)
+                
+                gap_id = self.kg.add_gap(gap, related_products)
+                gap_ids.append(gap_id)
+        
+        # Add additional relationships based on similarities
+        for i, product_id1 in enumerate(product_ids):
+            for product_id2 in product_ids[i+1:]:
+                # Find common features
+                product1_features = set(neighbor for neighbor in self.kg.graph.neighbors(product_id1)
+                                       if neighbor in self.kg.feature_nodes)
+                product2_features = set(neighbor for neighbor in self.kg.graph.neighbors(product_id2)
+                                      if neighbor in self.kg.feature_nodes)
+                
+                common_features = product1_features.intersection(product2_features)
+                if common_features:
+                    similarity = len(common_features) / len(product1_features.union(product2_features))
+                    if similarity > 0.3:  # Only add relationship if similarity is significant
+                        self.kg.add_relationship(
+                            product_id1, 
+                            product_id2, 
+                            "similar_to", 
+                            {"similarity": similarity, "common_features": len(common_features)}
+                        )
+        
+        # Visualize the knowledge graph
+        visualization_path = self.kg.visualize()
+        
+        return {
+            "num_products": len(product_ids),
+            "num_gaps": len(gap_ids),
+            "num_features": len(self.kg.feature_nodes),
+            "num_relationships": len(self.kg.graph.edges),
+            "visualization_path": visualization_path
+        }
+    
+    async def _find_similar_products(self, product_id: str) -> Dict[str, Any]:
+        """
+        Find products similar to the given product.
+        
+        Args:
+            product_id: The ID of the product to find similar products for
+                
+        Returns:
+            Dict[str, Any]: Information about similar products
+        """
+        if not product_id.startswith("product:"):
+            product_id = f"product:{product_id.lower().replace(' ', '_')}"
+        
+        if product_id not in self.kg.product_nodes:
+            return {"error": f"Product '{product_id}' not found in knowledge graph"}
+        
+        similar_products = self.kg.find_similar_products(product_id)
+        
+        # Extract product details
+        product_details = []
+        for prod_id, similarity in similar_products:
+            product_data = self.kg.graph.nodes[prod_id]
+            product_details.append({
+                "id": prod_id,
+                "name": product_data.get("name", prod_id),
+                "similarity": similarity,
+                "description": product_data.get("description", ""),
+                "url": product_data.get("url", "")
+            })
+        
+        return {
+            "product_id": product_id,
+            "product_name": self.kg.graph.nodes[product_id].get("name", product_id),
+            "similar_products": product_details
+        }
+    
+    async def _identify_potential_gaps(self, min_products: int = 2) -> Dict[str, Any]:
+        """
+        Identify potential gaps in products.
+        
+        Args:
+            min_products: Minimum number of products that must have a feature for it to be considered common
+                
+        Returns:
+            Dict[str, Any]: Information about potential gaps
+        """
+        opportunities = self.kg.find_feature_gap_opportunities(min_products)
+        
+        # Format the opportunities
+        gap_opportunities = []
+        for feature_id, missing_products in opportunities:
+            feature_name = self.kg.graph.nodes[feature_id].get("name", feature_id)
             
-            # Find popular features
-            popular_features = self.knowledge_graph.find_popular_features(category=category, limit=15)
+            # Get products that have this feature
+            products_with_feature = []
+            for neighbor in self.kg.graph.neighbors(feature_id):
+                if neighbor in self.kg.product_nodes:
+                    product_name = self.kg.graph.nodes[neighbor].get("name", neighbor)
+                    products_with_feature.append({"id": neighbor, "name": product_name})
             
-            # Count products per category if analyzing all categories
-            category_distribution = {}
-            if not category:
-                for cat_node, attrs in self.knowledge_graph.graph.nodes(data=True):
-                    if attrs.get('node_type') == 'Category':
-                        cat_products = self.knowledge_graph.get_products_by_category(cat_node)
-                        if cat_products:
-                            category_distribution[cat_node] = len(cat_products)
+            # Get products that don't have this feature
+            products_without_feature = []
+            for product_id in missing_products:
+                product_name = self.kg.graph.nodes[product_id].get("name", product_id)
+                products_without_feature.append({"id": product_id, "name": product_name})
             
-            self.log_info(f"Completed market analysis for {category_name}")
-            
-            analysis = {
-                "category": category_name,
-                "product_count": len(products),
-                "products": [p.get('name') for p in products],
-                "popular_features": popular_features
-            }
-            
-            if category_distribution:
-                analysis["category_distribution"] = category_distribution
-            
-            return analysis
-        except Exception as e:
-            self.log_error(f"Error in market analysis: {e}")
-            return {
-                "status": "error",
-                "message": f"Failed to analyze market: {str(e)}"
-            }
+            gap_opportunities.append({
+                "feature_id": feature_id,
+                "feature_name": feature_name,
+                "products_with_feature": products_with_feature,
+                "products_without_feature": products_without_feature,
+                "opportunity_strength": len(products_with_feature) / (len(products_with_feature) + len(products_without_feature))
+            })
+        
+        # Sort by opportunity strength
+        gap_opportunities.sort(key=lambda x: x["opportunity_strength"], reverse=True)
+        
+        return {
+            "gap_opportunities": gap_opportunities,
+            "num_opportunities": len(gap_opportunities)
+        }
+    
+    async def _analyze_product(self, product_id: str) -> Dict[str, Any]:
+        """
+        Analyze a product in detail using the knowledge graph.
+        
+        Args:
+            product_id: The ID of the product to analyze
+                
+        Returns:
+            Dict[str, Any]: Detailed analysis of the product
+        """
+        if not product_id.startswith("product:"):
+            product_id = f"product:{product_id.lower().replace(' ', '_')}"
+        
+        if product_id not in self.kg.product_nodes:
+            return {"error": f"Product '{product_id}' not found in knowledge graph"}
+        
+        # Get product details
+        product_data = self.kg.graph.nodes[product_id]
+        product_name = product_data.get("name", product_id)
+        
+        # Get product features
+        features = []
+        for neighbor in self.kg.graph.neighbors(product_id):
+            if neighbor in self.kg.feature_nodes:
+                feature_name = self.kg.graph.nodes[neighbor].get("name", neighbor)
+                
+                # Find how many other products have this feature
+                products_with_feature = [p for p in self.kg.graph.neighbors(neighbor) 
+                                        if p in self.kg.product_nodes and p != product_id]
+                
+                features.append({
+                    "id": neighbor,
+                    "name": feature_name,
+                    "uniqueness": 1.0 - (len(products_with_feature) / len(self.kg.product_nodes) if self.kg.product_nodes else 0)
+                })
+        
+        # Sort features by uniqueness
+        features.sort(key=lambda x: x["uniqueness"], reverse=True)
+        
+        # Get product gaps
+        gaps = []
+        for gap_id in self.kg.find_gaps_for_product(product_id):
+            gap_data = self.kg.graph.nodes[gap_id]
+            gaps.append({
+                "id": gap_id,
+                "name": gap_data.get("name", gap_id),
+                "type": gap_data.get("gap_type", "feature"),
+                "description": gap_data.get("description", "")
+            })
+        
+        # Get similar products
+        similar_products = []
+        for neighbor, edge_data in self.kg.graph.edges(product_id, data=True):
+            if neighbor in self.kg.product_nodes and edge_data.get("relationship") == "similar_to":
+                product_data = self.kg.graph.nodes[neighbor]
+                similar_products.append({
+                    "id": neighbor,
+                    "name": product_data.get("name", neighbor),
+                    "similarity": edge_data.get("similarity", 0.0),
+                    "common_features": edge_data.get("common_features", 0)
+                })
+        
+        # Sort similar products by similarity
+        similar_products.sort(key=lambda x: x["similarity"], reverse=True)
+        
+        # Get product category
+        categories = []
+        for neighbor in self.kg.graph.neighbors(product_id):
+            if neighbor in self.kg.category_nodes:
+                category_name = self.kg.graph.nodes[neighbor].get("name", neighbor)
+                categories.append({
+                    "id": neighbor,
+                    "name": category_name
+                })
+        
+        # Visualize the product's subgraph
+        # This would typically involve creating a subgraph of the product and its immediate neighbors
+        # and visualizing it
+        
+        return {
+            "product_id": product_id,
+            "product_name": product_name,
+            "description": product_data.get("description", ""),
+            "url": product_data.get("url", ""),
+            "pricing": product_data.get("pricing", ""),
+            "audience": product_data.get("audience", ""),
+            "features": features,
+            "gaps": gaps,
+            "similar_products": similar_products,
+            "categories": categories,
+            "uniqueness_score": sum(f["uniqueness"] for f in features) / len(features) if features else 0.0
+        }

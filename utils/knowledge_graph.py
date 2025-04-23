@@ -1,520 +1,522 @@
 """
 Knowledge Graph utilities for the SaaS Cloner system.
-This module provides functionality for creating, updating, and querying a knowledge graph
-of SaaS products, features, and market trends.
+
+This module provides functionality for creating, manipulating, and visualizing
+a knowledge graph of SaaS products, features, markets, and their relationships.
 """
-import json
 import logging
 import os
-from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple, Set
+from typing import Dict, Any, List, Set, Tuple, Optional
 
 import networkx as nx
 from pyvis.network import Network
 
-class SaaSKnowledgeGraph:
+import config
+
+logger = logging.getLogger(__name__)
+
+class KnowledgeGraph:
     """
-    Knowledge Graph for SaaS products, features, and relationships.
+    Knowledge Graph for SaaS products and their relationships.
     
-    This class provides methods to build and query a knowledge graph of SaaS products,
-    enabling sophisticated analysis of market trends, feature gaps, and enhancement opportunities.
+    This class provides functionality for building and analyzing a knowledge graph
+    of SaaS products, features, markets, and their relationships.
     """
     
-    def __init__(self, graph_file: str = "data/knowledge_graph.json"):
-        """
-        Initialize the knowledge graph.
+    def __init__(self):
+        """Initialize the Knowledge Graph."""
+        self.graph = nx.Graph()
+        self.product_nodes = set()
+        self.feature_nodes = set()
+        self.category_nodes = set()
+        self.company_nodes = set()
+        self.user_need_nodes = set()
         
-        Args:
-            graph_file: Path to store the graph data
-        """
-        self.graph = nx.DiGraph()
-        self.graph_file = graph_file
-        
-        # Ensure the data directory exists
-        os.makedirs(os.path.dirname(graph_file), exist_ok=True)
-        
-        # Load existing graph if available
-        if os.path.exists(graph_file):
-            self._load_graph()
-        else:
-            self._initialize_empty_graph()
-            
-        logging.info(f"Knowledge graph initialized with {len(self.graph.nodes)} nodes and {len(self.graph.edges)} edges")
-    
-    def _initialize_empty_graph(self):
-        """Initialize an empty graph with basic categories"""
-        # Add top-level category nodes
-        categories = [
-            "Productivity", "Project Management", "Communication", "CRM", 
-            "Marketing", "Analytics", "Design", "Development", "HR", "Finance"
-        ]
-        
-        for category in categories:
-            self.graph.add_node(
-                category,
-                node_type="Category",
-                description=f"{category} SaaS applications",
-                created_at=datetime.now().isoformat()
-            )
-            
-        # Add basic relationships between categories where relevant
-        related_categories = [
-            ("Productivity", "Project Management"),
-            ("Project Management", "Development"),
-            ("Communication", "Project Management"),
-            ("Marketing", "CRM"),
-            ("Analytics", "Marketing"),
-            ("Development", "Design")
-        ]
-        
-        for source, target in related_categories:
-            self.graph.add_edge(
-                source, target,
-                relationship="related_to",
-                weight=0.5,
-                created_at=datetime.now().isoformat()
-            )
-        
-        # Save the initialized graph
-        self._save_graph()
-            
-    def _load_graph(self):
-        """Load the graph from file"""
-        try:
-            data = json.load(open(self.graph_file, 'r'))
-            
-            # Clear existing graph
-            self.graph.clear()
-            
-            # Add nodes
-            for node, attrs in data['nodes'].items():
-                self.graph.add_node(node, **attrs)
-                
-            # Add edges
-            for source, targets in data['edges'].items():
-                for target, attrs in targets.items():
-                    self.graph.add_edge(source, target, **attrs)
-                    
-            logging.info(f"Loaded knowledge graph from {self.graph_file}")
-        except Exception as e:
-            logging.error(f"Error loading knowledge graph: {e}")
-            self._initialize_empty_graph()
-    
-    def _save_graph(self):
-        """Save the graph to file"""
-        try:
-            # Convert graph to serializable format
-            data = {
-                'nodes': {node: attrs for node, attrs in self.graph.nodes(data=True)},
-                'edges': {}
-            }
-            
-            # Process edges
-            for source, target, attrs in self.graph.edges(data=True):
-                if source not in data['edges']:
-                    data['edges'][source] = {}
-                data['edges'][source][target] = attrs
-            
-            # Save to file
-            with open(self.graph_file, 'w') as f:
-                json.dump(data, f, indent=2)
-                
-            logging.info(f"Saved knowledge graph to {self.graph_file}")
-        except Exception as e:
-            logging.error(f"Error saving knowledge graph: {e}")
-    
     def add_product(self, product_data: Dict[str, Any]) -> str:
         """
-        Add a SaaS product to the knowledge graph.
+        Add a product to the knowledge graph.
         
         Args:
-            product_data: Dictionary containing product information
-            
+            product_data: A dictionary containing product information
+                
         Returns:
-            str: ID of the added product node
+            str: The ID of the added product node
         """
-        product_name = product_data.get('name')
-        if not product_name:
-            raise ValueError("Product data must include a name")
+        # Extract product information
+        product_id = f"product:{product_data.get('name', '').lower().replace(' ', '_')}"
+        product_name = product_data.get('name', 'Unknown Product')
+        product_description = product_data.get('description', '')
+        product_url = product_data.get('url', '')
+        product_category = product_data.get('category', '')
+        product_features = product_data.get('feature_list', [])
+        product_pricing = product_data.get('pricing_model', '')
+        product_audience = product_data.get('target_audience', '')
         
-        # Add the product node if it doesn't exist
-        if product_name not in self.graph.nodes:
+        # Add product node
+        self.graph.add_node(
+            product_id, 
+            type='product',
+            name=product_name,
+            description=product_description,
+            url=product_url,
+            pricing=product_pricing,
+            audience=product_audience
+        )
+        self.product_nodes.add(product_id)
+        
+        # Add category and connect to product
+        if product_category:
+            category_id = f"category:{product_category.lower().replace(' ', '_')}"
             self.graph.add_node(
-                product_name,
-                node_type="Product",
-                created_at=datetime.now().isoformat(),
-                updated_at=datetime.now().isoformat(),
-                **{k: v for k, v in product_data.items() if k != 'name'}
+                category_id,
+                type='category',
+                name=product_category
             )
-        else:
-            # Update existing product
-            for key, value in product_data.items():
-                if key != 'name':
-                    self.graph.nodes[product_name][key] = value
-            self.graph.nodes[product_name]['updated_at'] = datetime.now().isoformat()
+            self.category_nodes.add(category_id)
+            self.graph.add_edge(product_id, category_id, relationship='belongs_to')
         
-        # Add connections to categories if provided
-        categories = product_data.get('categories', [])
-        for category in categories:
-            if category in self.graph.nodes:
-                self.graph.add_edge(
-                    category, product_name,
-                    relationship="contains",
-                    weight=1.0,
-                    created_at=datetime.now().isoformat()
-                )
+        # Add features and connect to product
+        for feature in product_features:
+            feature_id = f"feature:{feature.lower().replace(' ', '_')}"
+            self.graph.add_node(
+                feature_id,
+                type='feature',
+                name=feature
+            )
+            self.feature_nodes.add(feature_id)
+            self.graph.add_edge(product_id, feature_id, relationship='has_feature')
         
-        # Add features if provided
-        features = product_data.get('feature_list', [])
-        for feature in features:
-            feature_id = f"feature:{feature}"
+        logger.info(f"Added product '{product_name}' to knowledge graph")
+        return product_id
+    
+    def add_gap(self, gap_data: Dict[str, Any], related_products: Optional[List[str]] = None) -> str:
+        """
+        Add a gap to the knowledge graph.
+        
+        Args:
+            gap_data: A dictionary containing gap information
+            related_products: Optional list of product IDs that this gap relates to
+                
+        Returns:
+            str: The ID of the added gap node
+        """
+        # Extract gap information
+        gap_type = gap_data.get('type', 'feature')  # feature, market, or experience
+        gap_description = gap_data.get('description', '')
+        gap_name = gap_data.get('name', gap_description[:30])
+        
+        # Create a unique ID for the gap
+        gap_id = f"gap:{gap_type}:{gap_name.lower().replace(' ', '_')}"
+        
+        # Add gap node
+        self.graph.add_node(
+            gap_id,
+            type='gap',
+            gap_type=gap_type,
+            name=gap_name,
+            description=gap_description
+        )
+        
+        # Connect gap to related products
+        if related_products:
+            for product_id in related_products:
+                if product_id in self.product_nodes:
+                    self.graph.add_edge(gap_id, product_id, relationship='identified_in')
+        
+        # If this is a feature gap, add it as a potential feature
+        if gap_type == 'feature':
+            feature_id = f"feature:{gap_name.lower().replace(' ', '_')}"
             
-            # Add feature node if it doesn't exist
-            if feature_id not in self.graph.nodes:
+            if feature_id not in self.feature_nodes:
                 self.graph.add_node(
                     feature_id,
-                    node_type="Feature",
-                    name=feature,
-                    description=feature,
-                    created_at=datetime.now().isoformat()
+                    type='feature',
+                    name=gap_name
                 )
+                self.feature_nodes.add(feature_id)
             
-            # Connect product to feature
-            self.graph.add_edge(
-                product_name, feature_id,
-                relationship="has_feature",
-                weight=1.0,
-                created_at=datetime.now().isoformat()
-            )
+            self.graph.add_edge(gap_id, feature_id, relationship='suggests')
         
-        # Add competitors if provided
-        competitors = product_data.get('competitors', [])
-        for competitor in competitors:
-            if competitor in self.graph.nodes:
-                self.graph.add_edge(
-                    product_name, competitor,
-                    relationship="competes_with",
-                    weight=1.0,
-                    created_at=datetime.now().isoformat()
-                )
+        logger.info(f"Added gap '{gap_name}' to knowledge graph")
+        return gap_id
+    
+    def add_user_need(self, need_data: Dict[str, Any], related_features: Optional[List[str]] = None) -> str:
+        """
+        Add a user need to the knowledge graph.
+        
+        Args:
+            need_data: A dictionary containing user need information
+            related_features: Optional list of feature IDs that address this need
                 
-                # Add the reverse relationship
-                self.graph.add_edge(
-                    competitor, product_name,
-                    relationship="competes_with",
-                    weight=1.0,
-                    created_at=datetime.now().isoformat()
-                )
-        
-        # Save changes
-        self._save_graph()
-        
-        return product_name
-    
-    def get_product_features(self, product_name: str) -> List[str]:
+        Returns:
+            str: The ID of the added user need node
         """
-        Get features of a specific product.
+        # Extract need information
+        need_name = need_data.get('name', 'Unknown Need')
+        need_description = need_data.get('description', '')
+        need_importance = need_data.get('importance', 'medium')
+        
+        # Create a unique ID for the need
+        need_id = f"need:{need_name.lower().replace(' ', '_')}"
+        
+        # Add need node
+        self.graph.add_node(
+            need_id,
+            type='user_need',
+            name=need_name,
+            description=need_description,
+            importance=need_importance
+        )
+        self.user_need_nodes.add(need_id)
+        
+        # Connect need to related features
+        if related_features:
+            for feature_id in related_features:
+                if feature_id in self.feature_nodes:
+                    self.graph.add_edge(need_id, feature_id, relationship='addressed_by')
+        
+        logger.info(f"Added user need '{need_name}' to knowledge graph")
+        return need_id
+    
+    def add_company(self, company_data: Dict[str, Any], company_products: Optional[List[str]] = None) -> str:
+        """
+        Add a company to the knowledge graph.
         
         Args:
-            product_name: Name of the product
-            
+            company_data: A dictionary containing company information
+            company_products: Optional list of product IDs made by this company
+                
         Returns:
-            List of feature names
+            str: The ID of the added company node
         """
-        if product_name not in self.graph.nodes:
-            return []
+        # Extract company information
+        company_name = company_data.get('name', 'Unknown Company')
+        company_description = company_data.get('description', '')
+        company_url = company_data.get('url', '')
+        company_size = company_data.get('size', '')
+        company_funding = company_data.get('funding', '')
         
-        features = []
-        for _, target in self.graph.out_edges(product_name):
-            if target.startswith("feature:") and self.graph[product_name][target].get('relationship') == 'has_feature':
-                features.append(self.graph.nodes[target].get('name'))
+        # Create a unique ID for the company
+        company_id = f"company:{company_name.lower().replace(' ', '_')}"
         
-        return features
+        # Add company node
+        self.graph.add_node(
+            company_id,
+            type='company',
+            name=company_name,
+            description=company_description,
+            url=company_url,
+            size=company_size,
+            funding=company_funding
+        )
+        self.company_nodes.add(company_id)
+        
+        # Connect company to its products
+        if company_products:
+            for product_id in company_products:
+                if product_id in self.product_nodes:
+                    self.graph.add_edge(company_id, product_id, relationship='makes')
+        
+        logger.info(f"Added company '{company_name}' to knowledge graph")
+        return company_id
     
-    def get_competitive_products(self, product_name: str) -> List[Dict[str, Any]]:
+    def add_relationship(self, source_id: str, target_id: str, relationship_type: str, 
+                         properties: Optional[Dict[str, Any]] = None) -> bool:
         """
-        Get products that compete with the specified product.
+        Add a relationship between two nodes.
         
         Args:
-            product_name: Name of the product
-            
+            source_id: The ID of the source node
+            target_id: The ID of the target node
+            relationship_type: The type of relationship
+            properties: Optional dictionary of relationship properties
+                
         Returns:
-            List of competitor products with their details
+            bool: True if the relationship was added, False otherwise
         """
-        if product_name not in self.graph.nodes:
-            return []
-        
-        competitors = []
-        for _, target in self.graph.out_edges(product_name):
-            if self.graph[product_name][target].get('relationship') == 'competes_with':
-                competitors.append({
-                    'name': target,
-                    **{k: v for k, v in self.graph.nodes[target].items() if k != 'name'}
-                })
-        
-        return competitors
+        if source_id in self.graph and target_id in self.graph:
+            # Add the edge with properties
+            edge_properties = {'relationship': relationship_type}
+            if properties:
+                edge_properties.update(properties)
+            
+            self.graph.add_edge(source_id, target_id, **edge_properties)
+            logger.info(f"Added relationship '{relationship_type}' between '{source_id}' and '{target_id}'")
+            return True
+        else:
+            logger.warning(f"Cannot add relationship: one or both nodes '{source_id}' and '{target_id}' do not exist")
+            return False
     
-    def find_missing_features(self, product_name: str, competitor_names: Optional[List[str]] = None) -> Dict[str, List[str]]:
+    def find_similar_products(self, product_id: str, similarity_threshold: float = 0.5) -> List[Tuple[str, float]]:
         """
-        Identify features missing from the product compared to competitors.
+        Find products similar to the given product.
         
         Args:
-            product_name: Name of the product to analyze
-            competitor_names: Optional list of specific competitors to compare against,
-                              otherwise all competitors will be used
-                              
+            product_id: The ID of the product to find similar products for
+            similarity_threshold: Minimum similarity score (0-1) for products to be considered similar
+                
         Returns:
-            Dictionary mapping competitor names to lists of features missing from the product
+            List[Tuple[str, float]]: List of tuples containing product IDs and similarity scores
         """
-        if product_name not in self.graph.nodes:
-            return {}
-        
-        # Get this product's features
-        product_features = set(self.get_product_features(product_name))
-        
-        # Get competitors
-        competitors = self.get_competitive_products(product_name)
-        if competitor_names:
-            competitors = [c for c in competitors if c['name'] in competitor_names]
-        
-        missing_features = {}
-        for competitor in competitors:
-            competitor_name = competitor['name']
-            competitor_features = set(self.get_product_features(competitor_name))
-            
-            # Find features in competitor that are not in our product
-            missing = competitor_features - product_features
-            if missing:
-                missing_features[competitor_name] = list(missing)
-        
-        return missing_features
-    
-    def get_products_by_category(self, category: str) -> List[Dict[str, Any]]:
-        """
-        Get all products in a specific category.
-        
-        Args:
-            category: Name of the category
-            
-        Returns:
-            List of products with their details
-        """
-        if category not in self.graph.nodes:
+        if product_id not in self.product_nodes:
+            logger.warning(f"Product '{product_id}' not found in knowledge graph")
             return []
         
-        products = []
-        for _, target in self.graph.out_edges(category):
-            if self.graph[category][target].get('relationship') == 'contains':
-                products.append({
-                    'name': target,
-                    **{k: v for k, v in self.graph.nodes[target].items() if k != 'name'}
-                })
-        
-        return products
-    
-    def find_similar_products(self, product_name: str, min_similarity: float = 0.3) -> List[Tuple[str, float]]:
-        """
-        Find products similar to the given product based on shared features.
-        
-        Args:
-            product_name: Name of the product
-            min_similarity: Minimum similarity score (0-1) for inclusion in results
-            
-        Returns:
-            List of tuples (product_name, similarity_score) sorted by descending similarity
-        """
-        if product_name not in self.graph.nodes:
-            return []
-        
-        # Get all products
-        product_nodes = [n for n, attrs in self.graph.nodes(data=True) 
-                        if attrs.get('node_type') == 'Product' and n != product_name]
-        
-        # Get features of the reference product
-        ref_features = set(self.get_product_features(product_name))
-        if not ref_features:
-            return []
-        
-        # Calculate similarity scores
         similarity_scores = []
-        for other_product in product_nodes:
-            other_features = set(self.get_product_features(other_product))
-            if not other_features:
+        product_features = set(neighbor for neighbor in self.graph.neighbors(product_id)
+                               if neighbor in self.feature_nodes)
+        
+        for other_product in self.product_nodes:
+            if other_product == product_id:
                 continue
             
-            # Jaccard similarity: intersection / union
-            intersection = len(ref_features.intersection(other_features))
-            union = len(ref_features.union(other_features))
+            other_features = set(neighbor for neighbor in self.graph.neighbors(other_product)
+                                if neighbor in self.feature_nodes)
             
-            if union > 0:
+            # Calculate Jaccard similarity
+            if not product_features or not other_features:
+                similarity = 0.0
+            else:
+                intersection = len(product_features.intersection(other_features))
+                union = len(product_features.union(other_features))
                 similarity = intersection / union
-                if similarity >= min_similarity:
-                    similarity_scores.append((other_product, similarity))
+            
+            if similarity >= similarity_threshold:
+                similarity_scores.append((other_product, similarity))
         
-        # Sort by descending similarity
+        # Sort by similarity score in descending order
         return sorted(similarity_scores, key=lambda x: x[1], reverse=True)
     
-    def find_popular_features(self, category: Optional[str] = None, limit: int = 10) -> List[Tuple[str, int]]:
+    def find_gaps_for_product(self, product_id: str) -> List[str]:
         """
-        Find the most popular features across products.
+        Find gaps identified for a specific product.
         
         Args:
-            category: Optional category to filter products
-            limit: Maximum number of features to return
-            
+            product_id: The ID of the product to find gaps for
+                
         Returns:
-            List of tuples (feature_name, count) sorted by descending count
+            List[str]: List of gap IDs
         """
-        # Get relevant products
-        if category is not None:
-            products = [p['name'] for p in self.get_products_by_category(category)]
-        else:
-            products = [n for n, attrs in self.graph.nodes(data=True) 
-                      if attrs.get('node_type') == 'Product']
+        if product_id not in self.product_nodes:
+            logger.warning(f"Product '{product_id}' not found in knowledge graph")
+            return []
         
-        # Count feature occurrences
-        feature_counts = {}
-        for product in products:
-            features = self.get_product_features(product)
-            for feature in features:
-                if feature in feature_counts:
-                    feature_counts[feature] += 1
-                else:
-                    feature_counts[feature] = 1
+        gaps = []
+        for node in self.graph.nodes():
+            if node.startswith('gap:') and product_id in [neighbor for neighbor in self.graph.neighbors(node)]:
+                gaps.append(node)
         
-        # Sort by count and return top features
-        sorted_features = sorted(feature_counts.items(), key=lambda x: x[1], reverse=True)
-        return sorted_features[:limit]
+        return gaps
     
-    def visualize(self, output_file: str = "output/knowledge_graph.html", 
-                 height: str = "800px", width: str = "100%"):
+    def find_feature_gap_opportunities(self, min_products: int = 2) -> List[Tuple[str, List[str]]]:
         """
-        Generate an interactive visualization of the knowledge graph.
+        Find features that multiple products have but some don't, indicating potential gaps.
         
         Args:
-            output_file: Path to save the HTML output
-            height: Height of the visualization
-            width: Width of the visualization
+            min_products: Minimum number of products that must have a feature for it to be considered common
+                
+        Returns:
+            List[Tuple[str, List[str]]]: List of tuples containing feature IDs and list of products missing the feature
         """
-        # Create network
-        net = Network(height=height, width=width, directed=True, notebook=False)
+        opportunities = []
         
-        # Configure physics
-        net.barnes_hut(gravity=-80000, central_gravity=0.3, spring_length=250)
+        for feature in self.feature_nodes:
+            # Find products that have this feature
+            products_with_feature = [neighbor for neighbor in self.graph.neighbors(feature)
+                                     if neighbor in self.product_nodes]
+            
+            if len(products_with_feature) >= min_products:
+                # Find products that don't have this feature
+                products_without_feature = self.product_nodes - set(products_with_feature)
+                
+                if products_without_feature:
+                    opportunities.append((feature, list(products_without_feature)))
         
-        # Color configuration
-        node_colors = {
-            "Category": "#4287f5",  # Blue
-            "Product": "#42f554",   # Green
-            "Feature": "#f5a742"    # Orange
+        return opportunities
+    
+    def visualize(self, output_path: Optional[str] = None) -> str:
+        """
+        Create a visualization of the knowledge graph.
+        
+        Args:
+            output_path: Optional path to save the visualization to
+                
+        Returns:
+            str: Path to the saved visualization
+        """
+        if not output_path:
+            output_path = config.KNOWLEDGE_GRAPH_VISUALIZATION_PATH
+        
+        # Create directories if they don't exist
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # Create network visualization
+        net = Network(height="800px", width="100%", notebook=False)
+        
+        # Add nodes with proper colors and shapes
+        for node_id in self.graph.nodes():
+            node_type = self.graph.nodes[node_id].get('type', 'unknown')
+            node_name = self.graph.nodes[node_id].get('name', node_id)
+            
+            # Set node properties based on type
+            if node_type == 'product':
+                color = '#4285F4'  # Blue
+                shape = 'dot'
+                size = 25
+            elif node_type == 'feature':
+                color = '#34A853'  # Green
+                shape = 'diamond'
+                size = 15
+            elif node_type == 'category':
+                color = '#FBBC05'  # Yellow
+                shape = 'triangle'
+                size = 20
+            elif node_type == 'gap':
+                color = '#EA4335'  # Red
+                shape = 'star'
+                size = 20
+            elif node_type == 'user_need':
+                color = '#9C27B0'  # Purple
+                shape = 'square'
+                size = 15
+            elif node_type == 'company':
+                color = '#FF6D01'  # Orange
+                shape = 'hexagon'
+                size = 20
+            else:
+                color = '#CCCCCC'  # Grey
+                shape = 'dot'
+                size = 10
+            
+            # Create node title (tooltip)
+            node_title = f"<b>{node_name}</b><br>"
+            for key, value in self.graph.nodes[node_id].items():
+                if key not in ['type', 'name']:
+                    node_title += f"{key}: {value}<br>"
+            
+            net.add_node(node_id, label=node_name, title=node_title, 
+                         color=color, shape=shape, size=size)
+        
+        # Add edges
+        for source, target, data in self.graph.edges(data=True):
+            relationship = data.get('relationship', 'related_to')
+            
+            # Set edge properties based on relationship
+            if relationship == 'has_feature':
+                color = '#34A853'  # Green
+            elif relationship == 'belongs_to':
+                color = '#FBBC05'  # Yellow
+            elif relationship == 'identified_in':
+                color = '#EA4335'  # Red
+            elif relationship == 'makes':
+                color = '#FF6D01'  # Orange
+            elif relationship == 'addressed_by':
+                color = '#9C27B0'  # Purple
+            else:
+                color = '#AAAAAA'  # Light grey
+            
+            net.add_edge(source, target, title=relationship, color=color)
+        
+        # Apply physics settings for better visualization
+        net.set_options("""
+        {
+          "physics": {
+            "forceAtlas2Based": {
+              "gravitationalConstant": -50,
+              "centralGravity": 0.01,
+              "springLength": 100,
+              "springConstant": 0.08
+            },
+            "maxVelocity": 50,
+            "solver": "forceAtlas2Based",
+            "timestep": 0.35,
+            "stabilization": {
+              "enabled": true,
+              "iterations": 1000
+            }
+          },
+          "interaction": {
+            "hover": true,
+            "tooltipDelay": 200
+          }
+        }
+        """)
+        
+        # Save the visualization
+        net.save_graph(output_path)
+        logger.info(f"Knowledge graph visualization saved to {output_path}")
+        
+        return output_path
+    
+    def export_to_json(self) -> Dict[str, Any]:
+        """
+        Export the knowledge graph to a JSON serializable dictionary.
+        
+        Returns:
+            Dict[str, Any]: The knowledge graph as a JSON serializable dictionary
+        """
+        json_graph = {
+            "nodes": [],
+            "edges": []
         }
         
         # Add nodes
-        for node, attrs in self.graph.nodes(data=True):
-            node_type = attrs.get('node_type', 'Unknown')
-            label = attrs.get('name', node)
-            
-            if node.startswith("feature:"):
-                label = attrs.get('name', node.replace("feature:", ""))
-            
-            title = f"<b>{label}</b><br>"
-            if 'description' in attrs:
-                title += f"{attrs['description']}<br>"
-            
-            for k, v in attrs.items():
-                if k not in ['node_type', 'name', 'description', 'created_at', 'updated_at']:
-                    title += f"{k}: {v}<br>"
-            
-            net.add_node(
-                node, 
-                label=label,
-                title=title,
-                color=node_colors.get(node_type, "#b2b2b2"),
-                shape="dot" if node_type == "Feature" else "ellipse",
-                size=15 if node_type == "Category" else 10
-            )
+        for node_id, node_data in self.graph.nodes(data=True):
+            node_info = {"id": node_id}
+            node_info.update(node_data)
+            json_graph["nodes"].append(node_info)
         
         # Add edges
-        for source, target, attrs in self.graph.edges(data=True):
-            relationship = attrs.get('relationship', '')
-            
-            # Set edge color based on relationship
-            if relationship == 'has_feature':
-                color = '#9c27b0'  # Purple
-            elif relationship == 'contains':
-                color = '#2196f3'  # Blue
-            elif relationship == 'competes_with':
-                color = '#f44336'  # Red
-            else:
-                color = '#999999'  # Gray
-            
-            net.add_edge(
-                source, target,
-                title=relationship,
-                color=color,
-                arrows="to"
-            )
+        for source, target, edge_data in self.graph.edges(data=True):
+            edge_info = {
+                "source": source,
+                "target": target
+            }
+            edge_info.update(edge_data)
+            json_graph["edges"].append(edge_info)
         
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        
-        # Save visualization
-        net.save_graph(output_file)
-        
-        return output_file
+        return json_graph
     
-    def query_graph(self, query_type: str, **kwargs) -> Any:
+    def import_from_json(self, json_graph: Dict[str, Any]) -> None:
         """
-        Query the knowledge graph with various query types.
+        Import a knowledge graph from a JSON serializable dictionary.
         
         Args:
-            query_type: Type of query to perform
-            **kwargs: Parameters specific to the query type
+            json_graph: The knowledge graph as a JSON serializable dictionary
+        """
+        # Create a new graph
+        self.graph = nx.Graph()
+        self.product_nodes = set()
+        self.feature_nodes = set()
+        self.category_nodes = set()
+        self.company_nodes = set()
+        self.user_need_nodes = set()
+        
+        # Add nodes
+        for node_info in json_graph["nodes"]:
+            node_id = node_info.pop("id")
+            self.graph.add_node(node_id, **node_info)
             
-        Returns:
-            Query results (format depends on query type)
-        """
-        # Map query type to function
-        query_functions = {
-            'product_features': self.get_product_features,
-            'competitive_products': self.get_competitive_products,
-            'missing_features': self.find_missing_features,
-            'products_by_category': self.get_products_by_category,
-            'similar_products': self.find_similar_products,
-            'popular_features': self.find_popular_features
-        }
+            # Add to appropriate set based on type
+            node_type = node_info.get("type", "unknown")
+            if node_type == "product":
+                self.product_nodes.add(node_id)
+            elif node_type == "feature":
+                self.feature_nodes.add(node_id)
+            elif node_type == "category":
+                self.category_nodes.add(node_id)
+            elif node_type == "company":
+                self.company_nodes.add(node_id)
+            elif node_type == "user_need":
+                self.user_need_nodes.add(node_id)
         
-        if query_type not in query_functions:
-            raise ValueError(f"Unknown query type: {query_type}")
+        # Add edges
+        for edge_info in json_graph["edges"]:
+            source = edge_info.pop("source")
+            target = edge_info.pop("target")
+            self.graph.add_edge(source, target, **edge_info)
         
-        # Execute the query
-        return query_functions[query_type](**kwargs)
-    
-    def bulk_add_products(self, products: List[Dict[str, Any]]) -> List[str]:
-        """
-        Add multiple products to the knowledge graph.
-        
-        Args:
-            products: List of product data dictionaries
-            
-        Returns:
-            List of added product IDs
-        """
-        added_ids = []
-        for product in products:
-            try:
-                product_id = self.add_product(product)
-                added_ids.append(product_id)
-            except Exception as e:
-                logging.error(f"Error adding product {product.get('name')}: {e}")
-        
-        return added_ids
+        logger.info(f"Imported knowledge graph with {len(self.graph.nodes)} nodes and {len(self.graph.edges)} edges")
 
-def create_knowledge_graph() -> SaaSKnowledgeGraph:
-    """
-    Factory function to create a knowledge graph instance.
-    
-    Returns:
-        SaaSKnowledgeGraph: Initialized knowledge graph
-    """
-    return SaaSKnowledgeGraph()
+# Create a singleton instance
+knowledge_graph = KnowledgeGraph()

@@ -6,8 +6,8 @@ import os
 from typing import Dict, Any
 
 # OpenAI API configuration
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-DEFAULT_MODEL = "gpt-4o"  # The newest OpenAI model
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+DEFAULT_MODEL = "gpt-4o"  # The newest OpenAI model is "gpt-4o" which was released May 13, 2024
 MAX_TOKENS = 1000
 
 # Database configuration 
