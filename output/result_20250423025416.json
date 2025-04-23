@@ -1,0 +1,13 @@
+{
+  "category": "productivity",
+  "products": [],
+  "count": 0,
+  "error": "No product blueprint provided for analytics",
+  "_design_completed": true,
+  "summary": {
+    "success": false,
+    "timestamp": 1745376856.6037767,
+    "error": "No product blueprint provided for analytics",
+    "failed_agent": "Unknown"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "category": "productivity",
+  "error": "'RunnableLambda' object is not callable",
+  "summary": {
+    "success": false,
+    "error": "'RunnableLambda' object is not callable",
+    "timestamp": 1745376823.0763535
+  }
+}
