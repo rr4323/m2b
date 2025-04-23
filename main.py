@@ -40,6 +40,18 @@ async def run_test_workflow():
         logging.error(f"Error running test workflow: {e}", exc_info=True)
         return {"error": str(e)}
 
+def initialize_database():
+    """Initialize the database"""
+    from models.database import create_tables
+    
+    try:
+        logging.info("Initializing database...")
+        create_tables()
+        logging.info("Database initialization complete.")
+    except Exception as e:
+        logging.error(f"Error initializing database: {e}", exc_info=True)
+        raise
+
 def main():
     """Main entry point for the SaaS Cloner workflow"""
     setup_logging()
@@ -49,6 +61,9 @@ def main():
     if not check_api_key():
         logging.error("OpenAI API key not found! Set the OPENAI_API_KEY environment variable.")
         return
+    
+    # Initialize the database
+    initialize_database()
     
     # Run test workflow in a separate event loop
     asyncio.run(run_test_workflow())

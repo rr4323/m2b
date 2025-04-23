@@ -13,4 +13,6 @@ dependencies = [
     "uvicorn>=0.34.2",
     "langchain-core>=0.3.55",
     "beautifulsoup4>=4.13.4",
+    "sqlalchemy>=2.0.40",
+    "psycopg2-binary>=2.9.10",
 ]
