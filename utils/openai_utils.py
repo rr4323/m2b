@@ -12,6 +12,11 @@ from config import OPENAI_MODEL
 
 # Initialize OpenAI client
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+# Ensure we have a valid API key
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY environment variable is not set. Please set a valid API key.")
+
 openai = OpenAI(api_key=OPENAI_API_KEY)
 
 def check_api_key() -> bool:

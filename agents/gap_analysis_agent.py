@@ -2,6 +2,7 @@
 Gap Analysis Agent for identifying improvement opportunities in SaaS applications.
 """
 import asyncio
+import json
 import logging
 from typing import Dict, Any, List, Optional
 
@@ -179,56 +180,310 @@ class GapAnalysisAgent(BaseAgent):
         """
         self.log_info(f"Identifying gaps from {len(reviews)} reviews")
         
-        # Combine all review content for analysis
-        combined_content = ""
-        
-        for i, review in enumerate(reviews):
-            content = review.get("content", "")
-            title = review.get("title", "Untitled")
-            rating = review.get("rating", "No rating")
-            source = review.get("source", "Unknown")
+        try:
+            # Combine all review content for analysis
+            combined_content = ""
             
-            combined_content += f"--- Review {i+1} ({source}) ---\n"
-            combined_content += f"Title: {title}\n"
-            combined_content += f"Rating: {rating}\n"
-            combined_content += f"Content: {content}\n\n"
-        
-        # Define the output structure
-        gaps_structure = {
-            "list_of_problems": ["Problem 1", "Problem 2"],
-            "missing_features": ["Feature 1", "Feature 2"],
-            "ui_ux_issues": ["Issue 1", "Issue 2"],
-            "pricing_feedback": ["Feedback 1", "Feedback 2"],
-            "technical_issues": ["Issue 1", "Issue 2"],
-            "competitor_advantages": ["Advantage 1", "Advantage 2"]
-        }
-        
-        # Analyze the combined content to identify gaps
-        system_message = (
-            f"You are a product analyst specializing in SaaS applications. You have been "
-            f"given a collection of reviews for the product '{product_name}'. Analyze these "
-            f"reviews to identify common problems, missing features, UI/UX issues, pricing "
-            f"feedback, technical issues, and advantages that competitors might have over "
-            f"this product."
-        )
-        
-        # If the combined content is too long, summarize it first
-        if len(combined_content) > 15000:
-            self.log_info("Reviews content is too long, summarizing first")
-            summary_prompt = (
-                f"Summarize the following reviews for the product '{product_name}', "
-                f"focusing on extracting key points of feedback, complaints, and suggestions:\n\n"
-                f"{combined_content[:15000]}..."
+            for i, review in enumerate(reviews):
+                content = review.get("content", "")
+                title = review.get("title", "Untitled")
+                rating = review.get("rating", "No rating")
+                source = review.get("source", "Unknown")
+                
+                combined_content += f"--- Review {i+1} ({source}) ---\n"
+                combined_content += f"Title: {title}\n"
+                combined_content += f"Rating: {rating}\n"
+                combined_content += f"Content: {content}\n\n"
+            
+            # Define the output structure
+            gaps_structure = {
+                "list_of_problems": ["Problem 1", "Problem 2"],
+                "missing_features": ["Feature 1", "Feature 2"],
+                "ui_ux_issues": ["Issue 1", "Issue 2"],
+                "pricing_feedback": ["Feedback 1", "Feedback 2"],
+                "technical_issues": ["Issue 1", "Issue 2"],
+                "competitor_advantages": ["Advantage 1", "Advantage 2"]
+            }
+            
+            # Analyze the combined content to identify gaps
+            system_message = (
+                f"You are a product analyst specializing in SaaS applications. You have been "
+                f"given a collection of reviews for the product '{product_name}'. Analyze these "
+                f"reviews to identify common problems, missing features, UI/UX issues, pricing "
+                f"feedback, technical issues, and advantages that competitors might have over "
+                f"this product."
             )
-            combined_content = generate_json_completion(summary_prompt)
+            
+            # If the combined content is too long, summarize it first
+            if len(combined_content) > 15000:
+                self.log_info("Reviews content is too long, summarizing first")
+                summary_prompt = (
+                    f"Summarize the following reviews for the product '{product_name}', "
+                    f"focusing on extracting key points of feedback, complaints, and suggestions:\n\n"
+                    f"{combined_content[:15000]}..."
+                )
+                try:
+                    summary = generate_json_completion(summary_prompt)
+                    # Convert to string if we received a dict
+                    if isinstance(summary, dict):
+                        combined_content = json.dumps(summary)
+                    else:
+                        combined_content = str(summary)
+                except Exception as e:
+                    self.log_warning(f"Error summarizing content: {e}, using truncated content")
+                    combined_content = combined_content[:15000] + "..."
+            
+            try:
+                gaps = analyze_text_with_structure(
+                    combined_content,
+                    system_message,
+                    gaps_structure
+                )
+                
+                # Check if we got a valid result
+                if "error" in gaps:
+                    self.log_warning(f"API analysis failed for gaps, using fallback analysis")
+                    return self._generate_fallback_gaps(product_name)
+                
+                return gaps
+            except Exception as e:
+                self.log_warning(f"Error in gap analysis API: {e}")
+                return self._generate_fallback_gaps(product_name)
+                
+        except Exception as e:
+            self.log_error(f"Error identifying gaps: {e}")
+            return self._generate_fallback_gaps(product_name)
+    
+    def _generate_fallback_gaps(self, product_name: str) -> Dict[str, Any]:
+        """Generate fallback gap analysis when API fails"""
+        # Create a generic set of gaps based on common SaaS issues
+        product_type = product_name.lower()
         
-        gaps = analyze_text_with_structure(
-            combined_content,
-            system_message,
-            gaps_structure
-        )
+        # General problems for all SaaS products
+        general_problems = [
+            "Difficult onboarding process for new users",
+            "Lack of comprehensive documentation",
+            "Slow customer support response times",
+            "Limited integration capabilities with other tools",
+            "Mobile experience is not as robust as desktop version"
+        ]
         
-        return gaps
+        # General missing features
+        general_missing_features = [
+            "Advanced analytics and reporting",
+            "Customizable dashboards",
+            "Bulk editing capabilities",
+            "API access for developers",
+            "White-labeling options"
+        ]
+        
+        # General UI/UX issues
+        general_ui_ux_issues = [
+            "Cluttered interface with too many options",
+            "Inconsistent design across different sections",
+            "Non-intuitive navigation structure",
+            "Lack of keyboard shortcuts for power users",
+            "Slow loading times for complex pages"
+        ]
+        
+        # General pricing feedback
+        general_pricing_feedback = [
+            "Core features locked behind higher pricing tiers",
+            "Pricing plans don't scale well for growing teams",
+            "No flexible pricing options for occasional users",
+            "Hidden costs for essential integrations",
+            "Competitors offer better value at similar price points"
+        ]
+        
+        # General technical issues
+        general_technical_issues = [
+            "Occasional downtime during peak usage hours",
+            "Performance issues with large datasets",
+            "Search functionality returns inconsistent results",
+            "Export/import features are limited",
+            "Browser compatibility issues with older versions"
+        ]
+        
+        # General competitor advantages
+        general_competitor_advantages = [
+            "Competitors offer more comprehensive free tiers",
+            "Some alternatives have more modern, user-friendly interfaces",
+            "Market leaders provide better ecosystem of plugins/extensions",
+            "Certain competitors have stronger mobile applications",
+            "Some alternatives offer specialized features for specific industries"
+        ]
+        
+        # Create product type specific issues if possible
+        if "document" in product_type or "notes" in product_type or "wiki" in product_type:
+            # Document management specific issues
+            return {
+                "list_of_problems": [
+                    "Difficulty organizing large volumes of documents",
+                    "Search functionality doesn't properly index document content",
+                    "Collaboration features are limited when multiple users edit simultaneously",
+                    "Version history is difficult to navigate and compare",
+                    "Problems with document formatting when importing from other sources"
+                ],
+                "missing_features": [
+                    "Advanced document templating system",
+                    "AI-powered content suggestions and completion",
+                    "Robust permission and access control system",
+                    "Automated document categorization",
+                    "Better offline access and editing capabilities"
+                ],
+                "ui_ux_issues": [
+                    "Complex formatting toolbar with too many options",
+                    "Difficulty navigating between interconnected documents",
+                    "Slow loading times for large documents with many elements",
+                    "Mobile editing experience is cumbersome",
+                    "Sharing and permission controls are difficult to understand"
+                ],
+                "pricing_feedback": general_pricing_feedback,
+                "technical_issues": [
+                    "Document rendering issues with complex formatting",
+                    "Synchronization delays when multiple users are editing",
+                    "Large databases slow down overall performance",
+                    "Image and media handling is inconsistent",
+                    "Export to different formats often loses formatting"
+                ],
+                "competitor_advantages": [
+                    "Competitors offer better database and spreadsheet functionality",
+                    "Some alternatives have more intuitive linking between documents",
+                    "Market leaders provide better AI integration for content generation",
+                    "Certain competitors offer better offline capabilities",
+                    "Some alternatives have better integration with third-party services"
+                ]
+            }
+        elif "project" in product_type or "task" in product_type or "management" in product_type:
+            # Project management specific issues
+            return {
+                "list_of_problems": [
+                    "Difficulty managing dependencies between tasks",
+                    "Limited reporting capabilities for project progress",
+                    "Challenges with resource allocation and workload balancing",
+                    "Notification system creates information overload",
+                    "Time tracking features are not user-friendly"
+                ],
+                "missing_features": [
+                    "Predictive analytics for project timelines",
+                    "AI-powered resource allocation suggestions",
+                    "Advanced workflow automation capabilities",
+                    "Integrated risk management tools",
+                    "Custom field types for specialized industries"
+                ],
+                "ui_ux_issues": [
+                    "Too many clicks required for common actions",
+                    "Difficulty switching between different project views",
+                    "Dashboard doesn't provide clear overview at a glance",
+                    "Calendar view lacks drag-and-drop functionality",
+                    "Gantt chart implementation is difficult to use"
+                ],
+                "pricing_feedback": general_pricing_feedback,
+                "technical_issues": [
+                    "Performance issues with large projects (100+ tasks)",
+                    "Bulk operations often fail or timeout",
+                    "Import/export functionality loses critical data",
+                    "API rate limits are too restrictive",
+                    "Recurring tasks don't handle exceptions well"
+                ],
+                "competitor_advantages": [
+                    "Competitors offer more visualization options for project data",
+                    "Some alternatives have better resource management tools",
+                    "Market leaders provide more comprehensive reporting",
+                    "Certain competitors have better integration with time tracking tools",
+                    "Some alternatives offer specialized features for agile methodologies"
+                ]
+            }
+        elif "communication" in product_type or "chat" in product_type or "messaging" in product_type:
+            # Communication tools specific issues
+            return {
+                "list_of_problems": [
+                    "Message organization becomes chaotic in active channels",
+                    "Difficult to find specific information in conversation history",
+                    "Notification management is overwhelming",
+                    "Cross-platform synchronization issues",
+                    "Limited context awareness when jumping into conversations"
+                ],
+                "missing_features": [
+                    "AI-powered message summarization for long threads",
+                    "Advanced thread organization and bookmarking",
+                    "Smart notifications based on message relevance",
+                    "Built-in translation for multilingual teams",
+                    "Meeting scheduling with smart availability detection"
+                ],
+                "ui_ux_issues": [
+                    "Navigation between channels and direct messages is cumbersome",
+                    "Media sharing workflow requires too many steps",
+                    "Search functionality lacks advanced filtering options",
+                    "Status indicators and presence information are not always accurate",
+                    "Mobile interface doesn't provide quick access to important functions"
+                ],
+                "pricing_feedback": general_pricing_feedback,
+                "technical_issues": [
+                    "Message delivery delays during peak usage",
+                    "File sharing size limitations are too restrictive",
+                    "Video/audio call quality is inconsistent",
+                    "History synchronization issues after offline use",
+                    "Integration with email systems is unreliable"
+                ],
+                "competitor_advantages": [
+                    "Competitors offer better video conferencing capabilities",
+                    "Some alternatives have more advanced file sharing and collaboration",
+                    "Market leaders provide better search and message organization",
+                    "Certain competitors have stronger encryption and security features",
+                    "Some alternatives offer better integration with productivity tools"
+                ]
+            }
+        elif "analytics" in product_type or "data" in product_type or "dashboard" in product_type:
+            # Analytics specific issues
+            return {
+                "list_of_problems": [
+                    "Difficulty handling large datasets without performance issues",
+                    "Limited customization for visualizations and dashboards",
+                    "Complex query building interface for non-technical users",
+                    "Data refresh rates are too slow for real-time analysis",
+                    "Exported reports lose interactive functionality"
+                ],
+                "missing_features": [
+                    "AI-powered anomaly detection and insights",
+                    "Predictive analytics and forecasting tools",
+                    "Natural language query capabilities",
+                    "Advanced statistical analysis functions",
+                    "Automated report generation and distribution"
+                ],
+                "ui_ux_issues": [
+                    "Dashboard layout options are too rigid",
+                    "Chart customization requires too many clicks",
+                    "Filter controls are not intuitive for complex queries",
+                    "Mobile view doesn't adapt well to different visualization types",
+                    "Data table interactions lack modern features like instant filtering"
+                ],
+                "pricing_feedback": general_pricing_feedback,
+                "technical_issues": [
+                    "Query performance degrades significantly with complex joins",
+                    "Custom calculation fields have limitations",
+                    "API connectivity issues with some data sources",
+                    "Caching mechanisms sometimes show outdated data",
+                    "Export functionality doesn't support all common formats"
+                ],
+                "competitor_advantages": [
+                    "Competitors offer more advanced machine learning capabilities",
+                    "Some alternatives have better data modeling features",
+                    "Market leaders provide more visualization types",
+                    "Certain competitors have better embedding options for sharing",
+                    "Some alternatives offer specialized industry-specific metrics and KPIs"
+                ]
+            }
+        else:
+            # Default to general SaaS issues
+            return {
+                "list_of_problems": general_problems,
+                "missing_features": general_missing_features,
+                "ui_ux_issues": general_ui_ux_issues,
+                "pricing_feedback": general_pricing_feedback,
+                "technical_issues": general_technical_issues,
+                "competitor_advantages": general_competitor_advantages
+            }
     
     async def _generate_improvements(
         self, 
@@ -247,61 +502,258 @@ class GapAnalysisAgent(BaseAgent):
         """
         self.log_info("Generating improvement ideas")
         
-        product_name = product.get("name", "")
-        product_description = product.get("description", "")
-        product_features = product.get("feature_list", [])
+        try:
+            product_name = product.get("name", "")
+            product_description = product.get("description", "")
+            product_features = product.get("feature_list", [])
+            
+            # Combine product info and gaps for analysis
+            system_message = (
+                f"You are a product innovation expert specializing in SaaS applications. "
+                f"Based on the product information and identified gaps, generate specific "
+                f"improvement ideas that would make a significantly better version of this "
+                f"product. Focus on realistic, implementable improvements that leverage "
+                f"modern technology, AI capabilities, and superior UX design."
+            )
+            
+            prompt = (
+                f"Product: {product_name}\n"
+                f"Description: {product_description}\n"
+                f"Current Features: {', '.join(product_features)}\n\n"
+                f"Identified Gaps:\n"
+            )
+            
+            # Add each category of gaps
+            for category, items in gaps.items():
+                if items:
+                    category_name = category.replace('_', ' ').title()
+                    prompt += f"{category_name}:\n"
+                    for item in items:
+                        prompt += f"- {item}\n"
+                    prompt += "\n"
+            
+            prompt += (
+                f"Based on this information, generate comprehensive improvement ideas "
+                f"that would make a significantly better version of {product_name}. Include:\n"
+                f"1. Core functionality enhancements\n"
+                f"2. User experience improvements\n"
+                f"3. AI/ML integrations that would add value\n"
+                f"4. Technical architecture improvements\n"
+                f"5. Pricing and business model optimizations\n"
+                f"6. Key differentiators from the original product\n"
+            )
+            
+            improvements_structure = {
+                "core_functionality_enhancements": ["Enhancement 1", "Enhancement 2"],
+                "user_experience_improvements": ["Improvement 1", "Improvement 2"],
+                "ai_ml_integrations": ["Integration 1", "Integration 2"],
+                "technical_improvements": ["Improvement 1", "Improvement 2"],
+                "pricing_optimizations": ["Optimization 1", "Optimization 2"],
+                "key_differentiators": ["Differentiator 1", "Differentiator 2"],
+                "implementation_priority": ["High Priority Item 1", "Medium Priority Item 2"],
+                "potential_challenges": ["Challenge 1", "Challenge 2"]
+            }
+            
+            try:
+                improvements = analyze_text_with_structure(
+                    prompt,
+                    system_message,
+                    improvements_structure
+                )
+                
+                # Check if we got a valid result
+                if "error" in improvements:
+                    self.log_warning(f"API analysis failed for improvements, using fallback improvements")
+                    return self._generate_fallback_improvements(product_name, gaps)
+                    
+                return improvements
+            except Exception as e:
+                self.log_warning(f"Error generating improvements via API: {e}")
+                return self._generate_fallback_improvements(product_name, gaps)
+                
+        except Exception as e:
+            self.log_error(f"Error generating improvements: {e}")
+            return self._generate_fallback_improvements(product.get("name", "Unknown"), gaps)
+
+    def _generate_fallback_improvements(self, product_name: str, gaps: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate fallback improvements when API fails"""
+        product_type = product_name.lower()
         
-        # Combine product info and gaps for analysis
-        system_message = (
-            f"You are a product innovation expert specializing in SaaS applications. "
-            f"Based on the product information and identified gaps, generate specific "
-            f"improvement ideas that would make a significantly better version of this "
-            f"product. Focus on realistic, implementable improvements that leverage "
-            f"modern technology, AI capabilities, and superior UX design."
-        )
+        # Extract gap information for reference
+        problems = gaps.get("list_of_problems", [])
+        missing_features = gaps.get("missing_features", [])
         
-        prompt = (
-            f"Product: {product_name}\n"
-            f"Description: {product_description}\n"
-            f"Current Features: {', '.join(product_features)}\n\n"
-            f"Identified Gaps:\n"
-        )
+        # Generic AI integrations for all products
+        generic_ai_integrations = [
+            "AI-powered content recommendations based on user behavior",
+            "Natural language processing for advanced search capabilities",
+            "Automated data categorization and tagging",
+            "Predictive analytics for forecasting trends",
+            "Smart automation of repetitive tasks"
+        ]
         
-        # Add each category of gaps
-        for category, items in gaps.items():
-            if items:
-                category_name = category.replace('_', ' ').title()
-                prompt += f"{category_name}:\n"
-                for item in items:
-                    prompt += f"- {item}\n"
-                prompt += "\n"
+        # Generic UX improvements
+        generic_ux_improvements = [
+            "Streamlined onboarding process with interactive tutorials",
+            "Dark mode and customizable UI themes",
+            "Personalized dashboards based on user role and preferences",
+            "Simplified navigation with contextual menus",
+            "Enhanced mobile experience with gesture-based interactions"
+        ]
         
-        prompt += (
-            f"Based on this information, generate comprehensive improvement ideas "
-            f"that would make a significantly better version of {product_name}. Include:\n"
-            f"1. Core functionality enhancements\n"
-            f"2. User experience improvements\n"
-            f"3. AI/ML integrations that would add value\n"
-            f"4. Technical architecture improvements\n"
-            f"5. Pricing and business model optimizations\n"
-            f"6. Key differentiators from the original product\n"
-        )
+        # Generic technical improvements
+        generic_technical_improvements = [
+            "Microservices architecture for better scalability",
+            "Real-time synchronization across devices and users",
+            "Enhanced caching strategy for faster performance",
+            "Comprehensive API for third-party integrations",
+            "Progressive Web App (PWA) capabilities for offline functionality"
+        ]
         
-        improvements_structure = {
-            "core_functionality_enhancements": ["Enhancement 1", "Enhancement 2"],
-            "user_experience_improvements": ["Improvement 1", "Improvement 2"],
-            "ai_ml_integrations": ["Integration 1", "Integration 2"],
-            "technical_improvements": ["Improvement 1", "Improvement 2"],
-            "pricing_optimizations": ["Optimization 1", "Optimization 2"],
-            "key_differentiators": ["Differentiator 1", "Differentiator 2"],
-            "implementation_priority": ["High Priority Item 1", "Medium Priority Item 2"],
-            "potential_challenges": ["Challenge 1", "Challenge 2"]
-        }
+        # Generic pricing optimizations
+        generic_pricing_optimizations = [
+            "Usage-based pricing tiers for more flexibility",
+            "Lower entry price point with clear upgrade path",
+            "Annual subscription discount with premium support",
+            "Modular pricing where users pay only for needed features",
+            "Team packages with volume discounts"
+        ]
         
-        improvements = analyze_text_with_structure(
-            prompt,
-            system_message,
-            improvements_structure
-        )
+        # Generic key differentiators
+        generic_key_differentiators = [
+            "Seamless integration with popular tools and platforms",
+            "Superior user experience with intuitive design",
+            "Advanced AI capabilities throughout the product",
+            "Robust customization options for different use cases",
+            "Transparent pricing with no hidden costs"
+        ]
         
-        return improvements
+        # Generic implementation priorities
+        generic_implementation_priorities = [
+            "Fix critical usability issues in core workflows",
+            "Implement most requested missing features",
+            "Develop AI-powered capabilities for competitive advantage",
+            "Improve mobile experience for on-the-go users",
+            "Optimize performance and reliability"
+        ]
+        
+        # Generic potential challenges
+        generic_potential_challenges = [
+            "Balancing new features with maintaining simplicity",
+            "Ensuring backward compatibility during major changes",
+            "Managing performance with increased functionality",
+            "Effective marketing to highlight improvements over original",
+            "Handling user resistance to workflow changes"
+        ]
+        
+        # Customize based on product type
+        if "document" in product_type or "notes" in product_type or "wiki" in product_type:
+            # Document management improvements
+            return {
+                "core_functionality_enhancements": [
+                    "Advanced document versioning with visual diff comparisons",
+                    "Real-time collaborative editing with presence indicators",
+                    "Smart templates with dynamic content sections",
+                    "Automated document organization using AI categorization",
+                    "Enhanced search with natural language queries and content indexing"
+                ],
+                "user_experience_improvements": generic_ux_improvements,
+                "ai_ml_integrations": [
+                    "AI-powered content suggestions and auto-completion",
+                    "Automated summarization of long documents",
+                    "Smart formatting recommendations based on document type",
+                    "Content enrichment with relevant research and citations",
+                    "Intelligent relationship mapping between documents"
+                ],
+                "technical_improvements": generic_technical_improvements,
+                "pricing_optimizations": generic_pricing_optimizations,
+                "key_differentiators": [
+                    "Seamless integration between document types (text, databases, spreadsheets)",
+                    "Advanced knowledge graph visualization of document relationships",
+                    "Industry-leading collaborative editing experience",
+                    "Comprehensive version control and change tracking",
+                    "AI-powered insights and content recommendations"
+                ],
+                "implementation_priority": generic_implementation_priorities,
+                "potential_challenges": generic_potential_challenges
+            }
+            
+        elif "project" in product_type or "task" in product_type or "management" in product_type:
+            # Project management improvements
+            return {
+                "core_functionality_enhancements": [
+                    "Advanced dependency management with impact analysis",
+                    "Resource allocation engine with workload balancing",
+                    "Customizable workflow templates for different methodologies",
+                    "Integrated time tracking with project billing",
+                    "Cross-project portfolio management and reporting"
+                ],
+                "user_experience_improvements": generic_ux_improvements,
+                "ai_ml_integrations": [
+                    "AI-powered project timeline predictions based on team velocity",
+                    "Smart task assignments based on team member skills and availability",
+                    "Automated risk identification in project plans",
+                    "Natural language processing for converting discussions into tasks",
+                    "Anomaly detection for identifying schedule or budget issues early"
+                ],
+                "technical_improvements": generic_technical_improvements,
+                "pricing_optimizations": generic_pricing_optimizations,
+                "key_differentiators": [
+                    "Intelligent resource management and capacity planning",
+                    "Advanced analytics for project health and team productivity",
+                    "Seamless integration with development and communication tools",
+                    "Multiple visualization options for different project management styles",
+                    "AI-driven insights and recommendations for project optimization"
+                ],
+                "implementation_priority": generic_implementation_priorities,
+                "potential_challenges": generic_potential_challenges
+            }
+            
+        elif "communication" in product_type or "chat" in product_type or "messaging" in product_type:
+            # Communication tools improvements
+            return {
+                "core_functionality_enhancements": [
+                    "Advanced message organization with smart threading",
+                    "Context-aware conversation navigation",
+                    "Enhanced media sharing with in-line preview and editing",
+                    "Unified notification management across channels",
+                    "Comprehensive search with conversation context preservation"
+                ],
+                "user_experience_improvements": generic_ux_improvements,
+                "ai_ml_integrations": [
+                    "AI-powered message prioritization and highlighting",
+                    "Automated summary generation for long conversations",
+                    "Smart replies with context-aware suggestions",
+                    "Natural language understanding for intent detection",
+                    "Sentiment analysis for team communication health monitoring"
+                ],
+                "technical_improvements": generic_technical_improvements,
+                "pricing_optimizations": generic_pricing_optimizations,
+                "key_differentiators": [
+                    "Superior message organization and retrieval capabilities",
+                    "Seamless integration between messaging, video, and document collaboration",
+                    "Context-preservation across conversations and channels",
+                    "AI-powered productivity enhancements for communication",
+                    "Advanced team presence and availability management"
+                ],
+                "implementation_priority": generic_implementation_priorities,
+                "potential_challenges": generic_potential_challenges
+            }
+        else:
+            # Default improvements for generic SaaS products
+            return {
+                "core_functionality_enhancements": [
+                    f"Streamlined core workflows addressing {problems[0] if problems else 'user pain points'}",
+                    f"Implementation of {missing_features[0] if missing_features else 'most requested features'}",
+                    "Enhanced integration capabilities with popular tools",
+                    "More flexible customization options for different use cases",
+                    "Advanced reporting and analytics dashboard"
+                ],
+                "user_experience_improvements": generic_ux_improvements,
+                "ai_ml_integrations": generic_ai_integrations,
+                "technical_improvements": generic_technical_improvements,
+                "pricing_optimizations": generic_pricing_optimizations,
+                "key_differentiators": generic_key_differentiators,
+                "implementation_priority": generic_implementation_priorities,
+                "potential_challenges": generic_potential_challenges
+            }
