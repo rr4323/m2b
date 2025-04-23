@@ -1,0 +1,54 @@
+{
+  "category": "productivity",
+  "products": [
+    {
+      "name": "Notion",
+      "description": "All-in-one workspace for notes, docs, wikis, projects, and team collaboration",
+      "url": "https://www.notion.so",
+      "source": "API",
+      "domain": "notion.so",
+      "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}"
+    },
+    {
+      "name": "Trello",
+      "description": "Flexible and visual project management tool for teams",
+      "url": "https://trello.com",
+      "source": "API",
+      "domain": "trello.com",
+      "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}"
+    },
+    {
+      "name": "Asana",
+      "description": "Work management platform for teams",
+      "url": "https://asana.com",
+      "source": "API",
+      "domain": "asana.com",
+      "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}"
+    },
+    {
+      "name": "ClickUp",
+      "description": "All-in-one productivity platform for tasks, docs, goals, and chat",
+      "url": "https://clickup.com",
+      "source": "API",
+      "domain": "clickup.com",
+      "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}"
+    },
+    {
+      "name": "Todoist",
+      "description": "Task management app for personal and team productivity",
+      "url": "https://todoist.com",
+      "source": "API",
+      "domain": "todoist.com",
+      "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}"
+    }
+  ],
+  "count": 5,
+  "error": "No product blueprint provided for analytics",
+  "_design_completed": true,
+  "summary": {
+    "success": false,
+    "timestamp": 1745377779.0930147,
+    "error": "No product blueprint provided for analytics",
+    "failed_agent": "Unknown"
+  }
+}
