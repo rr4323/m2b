@@ -1,0 +1,267 @@
+2025-04-23 02:52:55,714 - root - INFO - Starting SaaS Cloner system
+2025-04-23 02:53:37,395 - root - INFO - Starting SaaS Cloner system
+2025-04-23 02:53:37,396 - root - INFO - Initializing test workflow
+2025-04-23 02:53:37,396 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 02:53:37,731 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 02:53:37,731 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 02:53:37,731 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 02:53:43,069 - saas_cloner.graph - INFO - Running agent: Gap Analysis Agent
+2025-04-23 02:53:43,070 - agent.Gap Analysis Agent - INFO - Starting gap analysis process
+2025-04-23 02:53:43,070 - agent.Gap Analysis Agent - ERROR - No product provided for gap analysis
+2025-04-23 02:53:43,071 - saas_cloner.graph - INFO - Running agent: Product Blueprint Agent
+2025-04-23 02:53:43,071 - agent.Product Blueprint Agent - INFO - Starting product blueprint creation
+2025-04-23 02:53:43,071 - agent.Product Blueprint Agent - ERROR - No product provided for blueprint creation
+2025-04-23 02:53:43,072 - saas_cloner.graph - INFO - Running agent: Design Agent
+2025-04-23 02:53:43,072 - agent.Design Agent - INFO - Starting design process
+2025-04-23 02:53:43,072 - agent.Design Agent - ERROR - No product blueprint provided for design
+2025-04-23 02:53:43,073 - saas_cloner.graph - INFO - Design complete, routing to frontend and backend development
+2025-04-23 02:53:43,074 - saas_cloner.graph - ERROR - Error running SaaS Cloner workflow: 'RunnableLambda' object is not callable
+Traceback (most recent call last):
+  File "/home/runner/workspace/workflows/saas_cloner_graph.py", line 278, in run
+    result = await self.workflow.ainvoke(state)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/base.py", line 3075, in ainvoke
+    input = await coro_with_context(part(), context, create_task=True)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/base.py", line 4783, in ainvoke
+    return await self._acall_with_config(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/base.py", line 1981, in _acall_with_config
+    output: Output = await coro_with_context(coro, context)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/base.py", line 4715, in _ainvoke
+    output = await acall_func_with_variable_args(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/base.py", line 4685, in f
+    return await run_in_executor(config, func, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/config.py", line 616, in run_in_executor
+    return await asyncio.get_running_loop().run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/config.py", line 607, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/base.py", line 4679, in func
+    return call_func_with_variable_args(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/langchain_core/runnables/config.py", line 428, in call_func_with_variable_args
+    return func(input, **kwargs)  # type: ignore[call-arg]
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/workflows/saas_cloner_graph.py", line 83, in design_router
+    frontend_result = asyncio.run(frontend_node(frontend_state))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'RunnableLambda' object is not callable
+2025-04-23 02:53:43,076 - saas_cloner.graph - INFO - Saved workflow result to output/result_20250423025343.json
+2025-04-23 02:53:43,076 - root - INFO - Workflow test completed successfully
+2025-04-23 02:53:43,076 - root - INFO - Starting API server
+2025-04-23 02:54:16,269 - root - INFO - Starting SaaS Cloner system
+2025-04-23 02:54:16,269 - root - INFO - Initializing test workflow
+2025-04-23 02:54:16,269 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 02:54:16,445 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 02:54:16,445 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 02:54:16,445 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 02:54:16,590 - saas_cloner.graph - INFO - Running agent: Gap Analysis Agent
+2025-04-23 02:54:16,590 - agent.Gap Analysis Agent - INFO - Starting gap analysis process
+2025-04-23 02:54:16,591 - agent.Gap Analysis Agent - ERROR - No product provided for gap analysis
+2025-04-23 02:54:16,592 - saas_cloner.graph - INFO - Running agent: Product Blueprint Agent
+2025-04-23 02:54:16,592 - agent.Product Blueprint Agent - INFO - Starting product blueprint creation
+2025-04-23 02:54:16,592 - agent.Product Blueprint Agent - ERROR - No product provided for blueprint creation
+2025-04-23 02:54:16,593 - saas_cloner.graph - INFO - Running agent: Design Agent
+2025-04-23 02:54:16,593 - agent.Design Agent - INFO - Starting design process
+2025-04-23 02:54:16,593 - agent.Design Agent - ERROR - No product blueprint provided for design
+2025-04-23 02:54:16,594 - saas_cloner.graph - INFO - Design complete, routing to frontend and backend development
+2025-04-23 02:54:16,594 - saas_cloner.graph - INFO - Running agent: Frontend Agent
+2025-04-23 02:54:16,595 - agent.Frontend Agent - INFO - Starting frontend development process
+2025-04-23 02:54:16,595 - agent.Frontend Agent - ERROR - No product blueprint provided for frontend development
+2025-04-23 02:54:16,595 - saas_cloner.graph - INFO - Running agent: Backend Agent
+2025-04-23 02:54:16,595 - agent.Backend Agent - INFO - Starting backend development process
+2025-04-23 02:54:16,595 - agent.Backend Agent - ERROR - No product blueprint provided for backend development
+2025-04-23 02:54:16,596 - saas_cloner.graph - INFO - Running agent: LLM Agent
+2025-04-23 02:54:16,596 - agent.LLM Agent - INFO - Starting LLM integration process
+2025-04-23 02:54:16,596 - agent.LLM Agent - ERROR - No product blueprint provided for LLM integration
+2025-04-23 02:54:16,597 - saas_cloner.graph - INFO - Running agent: Test Agent
+2025-04-23 02:54:16,598 - agent.Test Agent - INFO - Starting testing process
+2025-04-23 02:54:16,598 - agent.Test Agent - ERROR - No product blueprint provided for testing
+2025-04-23 02:54:16,598 - saas_cloner.graph - INFO - Running agent: DevOps Agent
+2025-04-23 02:54:16,599 - agent.DevOps Agent - INFO - Starting DevOps process
+2025-04-23 02:54:16,599 - agent.DevOps Agent - ERROR - No product blueprint provided for DevOps
+2025-04-23 02:54:16,600 - saas_cloner.graph - INFO - Running agent: Deploy Agent
+2025-04-23 02:54:16,600 - agent.Deploy Agent - INFO - Starting deployment process
+2025-04-23 02:54:16,600 - agent.Deploy Agent - ERROR - No product blueprint provided for deployment
+2025-04-23 02:54:16,601 - saas_cloner.graph - INFO - Running agent: Marketing Agent
+2025-04-23 02:54:16,601 - agent.Marketing Agent - INFO - Starting marketing process
+2025-04-23 02:54:16,601 - agent.Marketing Agent - ERROR - No product blueprint provided for marketing
+2025-04-23 02:54:16,602 - saas_cloner.graph - INFO - Running agent: Analytics Agent
+2025-04-23 02:54:16,602 - agent.Analytics Agent - INFO - Starting analytics process
+2025-04-23 02:54:16,602 - agent.Analytics Agent - ERROR - No product blueprint provided for analytics
+2025-04-23 02:54:16,603 - saas_cloner.graph - INFO - Finalizing workflow
+2025-04-23 02:54:16,604 - saas_cloner.graph - INFO - Saved workflow result to output/result_20250423025416.json
+2025-04-23 02:54:16,604 - saas_cloner.graph - INFO - SaaS Cloner workflow completed successfully
+2025-04-23 02:54:16,604 - root - INFO - Workflow test completed successfully
+2025-04-23 02:54:16,605 - root - INFO - Starting API server
+2025-04-23 03:07:06,502 - root - INFO - Starting SaaS Cloner system
+2025-04-23 03:07:06,502 - root - INFO - Initializing database...
+2025-04-23 03:07:08,513 - root - INFO - Database initialization complete.
+2025-04-23 03:07:08,514 - root - INFO - Initializing test workflow
+2025-04-23 03:07:08,515 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 03:07:08,681 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 03:07:08,681 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 03:07:08,681 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 03:07:16,189 - root - INFO - Starting SaaS Cloner system
+2025-04-23 03:07:16,189 - root - INFO - Initializing database...
+2025-04-23 03:07:17,436 - root - INFO - Database initialization complete.
+2025-04-23 03:07:17,437 - root - INFO - Initializing test workflow
+2025-04-23 03:07:17,438 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 03:07:17,591 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 03:07:17,592 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 03:07:17,592 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 03:07:17,801 - saas_cloner.graph - INFO - Running agent: Gap Analysis Agent
+2025-04-23 03:07:17,802 - agent.Gap Analysis Agent - INFO - Starting gap analysis process
+2025-04-23 03:07:17,802 - agent.Gap Analysis Agent - ERROR - No product provided for gap analysis
+2025-04-23 03:07:17,803 - saas_cloner.graph - INFO - Running agent: Product Blueprint Agent
+2025-04-23 03:07:17,803 - agent.Product Blueprint Agent - INFO - Starting product blueprint creation
+2025-04-23 03:07:17,803 - agent.Product Blueprint Agent - ERROR - No product provided for blueprint creation
+2025-04-23 03:07:17,805 - saas_cloner.graph - INFO - Running agent: Design Agent
+2025-04-23 03:07:17,805 - agent.Design Agent - INFO - Starting design process
+2025-04-23 03:07:17,805 - agent.Design Agent - ERROR - No product blueprint provided for design
+2025-04-23 03:07:17,806 - saas_cloner.graph - INFO - Design complete, routing to frontend and backend development
+2025-04-23 03:07:17,806 - saas_cloner.graph - INFO - Running agent: Frontend Agent
+2025-04-23 03:07:17,806 - agent.Frontend Agent - INFO - Starting frontend development process
+2025-04-23 03:07:17,807 - agent.Frontend Agent - ERROR - No product blueprint provided for frontend development
+2025-04-23 03:07:17,807 - saas_cloner.graph - INFO - Running agent: Backend Agent
+2025-04-23 03:07:17,807 - agent.Backend Agent - INFO - Starting backend development process
+2025-04-23 03:07:17,807 - agent.Backend Agent - ERROR - No product blueprint provided for backend development
+2025-04-23 03:07:17,808 - saas_cloner.graph - INFO - Running agent: LLM Agent
+2025-04-23 03:07:17,808 - agent.LLM Agent - INFO - Starting LLM integration process
+2025-04-23 03:07:17,809 - agent.LLM Agent - ERROR - No product blueprint provided for LLM integration
+2025-04-23 03:07:17,810 - saas_cloner.graph - INFO - Running agent: Test Agent
+2025-04-23 03:07:17,810 - agent.Test Agent - INFO - Starting testing process
+2025-04-23 03:07:17,810 - agent.Test Agent - ERROR - No product blueprint provided for testing
+2025-04-23 03:07:17,811 - saas_cloner.graph - INFO - Running agent: DevOps Agent
+2025-04-23 03:07:17,811 - agent.DevOps Agent - INFO - Starting DevOps process
+2025-04-23 03:07:17,811 - agent.DevOps Agent - ERROR - No product blueprint provided for DevOps
+2025-04-23 03:07:17,812 - saas_cloner.graph - INFO - Running agent: Deploy Agent
+2025-04-23 03:07:17,812 - agent.Deploy Agent - INFO - Starting deployment process
+2025-04-23 03:07:17,812 - agent.Deploy Agent - ERROR - No product blueprint provided for deployment
+2025-04-23 03:07:17,813 - saas_cloner.graph - INFO - Running agent: Marketing Agent
+2025-04-23 03:07:17,813 - agent.Marketing Agent - INFO - Starting marketing process
+2025-04-23 03:07:17,814 - agent.Marketing Agent - ERROR - No product blueprint provided for marketing
+2025-04-23 03:07:17,814 - saas_cloner.graph - INFO - Running agent: Analytics Agent
+2025-04-23 03:07:17,815 - agent.Analytics Agent - INFO - Starting analytics process
+2025-04-23 03:07:17,815 - agent.Analytics Agent - ERROR - No product blueprint provided for analytics
+2025-04-23 03:07:17,815 - saas_cloner.graph - INFO - Finalizing workflow
+2025-04-23 03:07:17,816 - saas_cloner.graph - INFO - Saved workflow result to output/result_20250423030717.json
+2025-04-23 03:07:17,816 - saas_cloner.graph - INFO - SaaS Cloner workflow completed successfully
+2025-04-23 03:07:17,816 - root - INFO - Workflow test completed successfully
+2025-04-23 03:07:17,817 - root - INFO - Starting API server
+2025-04-23 03:09:24,929 - root - INFO - Starting SaaS Cloner system
+2025-04-23 03:09:24,929 - root - INFO - Initializing database...
+2025-04-23 03:09:28,720 - root - INFO - Database initialization complete.
+2025-04-23 03:09:28,722 - root - INFO - Initializing test workflow
+2025-04-23 03:09:28,722 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 03:09:28,883 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 03:09:28,883 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 03:09:28,883 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 03:09:34,906 - root - INFO - Starting SaaS Cloner system
+2025-04-23 03:09:34,906 - root - INFO - Initializing database...
+2025-04-23 03:09:36,131 - root - INFO - Database initialization complete.
+2025-04-23 03:09:36,132 - root - INFO - Initializing test workflow
+2025-04-23 03:09:36,133 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 03:09:36,381 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 03:09:36,381 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 03:09:36,381 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 03:09:36,647 - root - INFO - Using API data sources for products
+2025-04-23 03:09:36,649 - agent.Market Discovery Agent - INFO - Analyzing product: Notion
+2025-04-23 03:09:36,751 - urllib3.poolmanager - INFO - Redirecting https://www.notion.so -> https://www.notion.com/
+2025-04-23 03:09:37,078 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:09:37,081 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:09:37,081 - agent.Market Discovery Agent - INFO - Analyzing product: Trello
+2025-04-23 03:09:37,298 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:09:37,298 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:09:37,299 - agent.Market Discovery Agent - INFO - Analyzing product: Asana
+2025-04-23 03:09:37,652 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:09:37,653 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:09:37,653 - agent.Market Discovery Agent - INFO - Analyzing product: ClickUp
+2025-04-23 03:09:37,968 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:09:37,971 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:09:37,972 - agent.Market Discovery Agent - INFO - Analyzing product: Todoist
+2025-04-23 03:09:38,221 - urllib3.poolmanager - INFO - Redirecting https://todoist.com -> https://www.todoist.com/
+2025-04-23 03:09:38,984 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:09:38,985 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:09:39,075 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:09:39,076 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:09:39,078 - saas_cloner.graph - INFO - Running agent: Gap Analysis Agent
+2025-04-23 03:09:39,078 - agent.Gap Analysis Agent - INFO - Starting gap analysis process
+2025-04-23 03:09:39,078 - agent.Gap Analysis Agent - ERROR - No product provided for gap analysis
+2025-04-23 03:09:39,080 - saas_cloner.graph - INFO - Running agent: Product Blueprint Agent
+2025-04-23 03:09:39,080 - agent.Product Blueprint Agent - INFO - Starting product blueprint creation
+2025-04-23 03:09:39,080 - agent.Product Blueprint Agent - ERROR - No product provided for blueprint creation
+2025-04-23 03:09:39,082 - saas_cloner.graph - INFO - Running agent: Design Agent
+2025-04-23 03:09:39,082 - agent.Design Agent - INFO - Starting design process
+2025-04-23 03:09:39,082 - agent.Design Agent - ERROR - No product blueprint provided for design
+2025-04-23 03:09:39,083 - saas_cloner.graph - INFO - Design complete, routing to frontend and backend development
+2025-04-23 03:09:39,083 - saas_cloner.graph - INFO - Running agent: Frontend Agent
+2025-04-23 03:09:39,084 - agent.Frontend Agent - INFO - Starting frontend development process
+2025-04-23 03:09:39,084 - agent.Frontend Agent - ERROR - No product blueprint provided for frontend development
+2025-04-23 03:09:39,084 - saas_cloner.graph - INFO - Running agent: Backend Agent
+2025-04-23 03:09:39,084 - agent.Backend Agent - INFO - Starting backend development process
+2025-04-23 03:09:39,084 - agent.Backend Agent - ERROR - No product blueprint provided for backend development
+2025-04-23 03:09:39,086 - saas_cloner.graph - INFO - Running agent: LLM Agent
+2025-04-23 03:09:39,086 - agent.LLM Agent - INFO - Starting LLM integration process
+2025-04-23 03:09:39,086 - agent.LLM Agent - ERROR - No product blueprint provided for LLM integration
+2025-04-23 03:09:39,087 - saas_cloner.graph - INFO - Running agent: Test Agent
+2025-04-23 03:09:39,087 - agent.Test Agent - INFO - Starting testing process
+2025-04-23 03:09:39,087 - agent.Test Agent - ERROR - No product blueprint provided for testing
+2025-04-23 03:09:39,088 - saas_cloner.graph - INFO - Running agent: DevOps Agent
+2025-04-23 03:09:39,088 - agent.DevOps Agent - INFO - Starting DevOps process
+2025-04-23 03:09:39,088 - agent.DevOps Agent - ERROR - No product blueprint provided for DevOps
+2025-04-23 03:09:39,089 - saas_cloner.graph - INFO - Running agent: Deploy Agent
+2025-04-23 03:09:39,089 - agent.Deploy Agent - INFO - Starting deployment process
+2025-04-23 03:09:39,089 - agent.Deploy Agent - ERROR - No product blueprint provided for deployment
+2025-04-23 03:09:39,090 - saas_cloner.graph - INFO - Running agent: Marketing Agent
+2025-04-23 03:09:39,090 - agent.Marketing Agent - INFO - Starting marketing process
+2025-04-23 03:09:39,090 - agent.Marketing Agent - ERROR - No product blueprint provided for marketing
+2025-04-23 03:09:39,091 - saas_cloner.graph - INFO - Running agent: Analytics Agent
+2025-04-23 03:09:39,092 - agent.Analytics Agent - INFO - Starting analytics process
+2025-04-23 03:09:39,092 - agent.Analytics Agent - ERROR - No product blueprint provided for analytics
+2025-04-23 03:09:39,092 - saas_cloner.graph - INFO - Finalizing workflow
+2025-04-23 03:09:39,093 - saas_cloner.graph - INFO - Saved workflow result to output/result_20250423030939.json
+2025-04-23 03:09:39,093 - saas_cloner.graph - INFO - SaaS Cloner workflow completed successfully
+2025-04-23 03:09:39,093 - root - INFO - Workflow test completed successfully
+2025-04-23 03:09:39,095 - root - INFO - Starting API server
+2025-04-23 03:21:08,788 - root - INFO - Starting SaaS Cloner system
+2025-04-23 03:21:08,788 - root - INFO - Initializing database...
+2025-04-23 03:21:10,526 - root - INFO - Database initialization complete.
+2025-04-23 03:21:10,527 - root - INFO - Initializing test workflow
+2025-04-23 03:21:10,527 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 03:21:10,674 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 03:21:10,674 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 03:21:10,675 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 03:21:15,554 - root - INFO - Using API data sources for products
+2025-04-23 03:21:15,554 - agent.Market Discovery Agent - INFO - Analyzing product: Notion
+2025-04-23 03:21:15,648 - urllib3.poolmanager - INFO - Redirecting https://www.notion.so -> https://www.notion.com/
+2025-04-23 03:21:15,917 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:21:15,918 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:21:15,919 - agent.Market Discovery Agent - WARNING - API analysis failed for Notion, using default analysis
+2025-04-23 03:21:15,919 - agent.Market Discovery Agent - INFO - Analyzing product: Trello
+2025-04-23 03:21:16,123 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:21:16,124 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:21:16,124 - agent.Market Discovery Agent - WARNING - API analysis failed for Trello, using default analysis
+2025-04-23 03:21:16,124 - agent.Market Discovery Agent - INFO - Analyzing product: Asana
+2025-04-23 03:21:16,512 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-04-23 03:21:16,513 - root - ERROR - Error generating JSON completion: Error code: 401 - {'error': {'message': 'Incorrect API key provided: 123. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-04-23 03:21:16,513 - agent.Market Discovery Agent - WARNING - API analysis failed for Asana, using default analysis
+2025-04-23 03:21:16,513 - agent.Market Discovery Agent - INFO - Analyzing product: ClickUp
+2025-04-23 03:21:18,841 - root - INFO - Starting SaaS Cloner system
+2025-04-23 03:21:18,842 - root - INFO - Initializing database...
+2025-04-23 03:21:20,132 - root - INFO - Database initialization complete.
+2025-04-23 03:21:20,133 - root - INFO - Initializing test workflow
+2025-04-23 03:21:20,133 - saas_cloner.graph - INFO - Starting SaaS Cloner workflow with input: productivity
+2025-04-23 03:21:20,312 - saas_cloner.graph - INFO - Running agent: Market Discovery Agent
+2025-04-23 03:21:20,313 - agent.Market Discovery Agent - INFO - Starting market discovery process
+2025-04-23 03:21:20,313 - agent.Market Discovery Agent - INFO - Searching Product Hunt for productivity products
+2025-04-23 03:21:20,449 - root - INFO - Using API data sources for products
+2025-04-23 03:21:20,450 - agent.Market Discovery Agent - INFO - Analyzing product: Notion
