@@ -1,6 +1,55 @@
 Cursor AI Prompt tailored for building your multi-agent SaaS Cloner & Enhancer project, end-to-end — including trend detection, replication, enhancement, deployment, and monetization — using LangGraph + agents.
 🚀 Cursor Prompt: Multi-Agent SaaS Cloning Factory
 
+## Application Overview
+
+This application automates the process of discovering, enhancing, and deploying SaaS products using a multi-agent workflow. The key steps are:
+
+1. **Discover Trending SaaS Apps**
+    - The system searches marketplaces (Product Hunt, G2, AppSumo, etc.) for popular and trending SaaS applications using the MarketDiscoveryAgent.
+
+2. **Perform Gap Analysis**
+    - The GapAnalysisAgent analyzes user reviews, community feedback, and feature sets to identify missing features, pain points, or market opportunities.
+
+3. **Create and Enhance a Clone**
+    - The ProductBlueprintAgent generates an improved product specification, integrating enhancements from the gap analysis.
+    - DesignAgent, FrontendAgent, and BackendAgent implement the UI/UX and functionality, embedding the enhancements.
+    - DevOpsAgent sets up infrastructure and CI/CD pipelines.
+    - TestAgent ensures quality through automated testing.
+    - LLMAgent can add AI-powered smart features as needed.
+
+4. **Deploy to the Marketplace**
+    - DeployAgent handles deployment to cloud platforms.
+    - MarketingAgent prepares launch materials and strategies for marketplaces like AppSumo or Product Hunt.
+    - AnalyticsAgent and FeedbackAgent track app performance and user feedback, enabling continuous improvement via the IterateAgent.
+
+**Summary:**
+> This application automatically discovers trending SaaS apps, analyzes gaps and user pain points, generates an improved clone with enhancements, and deploys it to the marketplace—all in an automated, agent-driven workflow.
+
+---
+
+## Visual Workflow Diagram
+
+Below is a visual representation of the multi-agent SaaS Cloner workflow:
+
+```mermaid
+flowchart TD
+    A[MarketDiscoveryAgent] --> B[GapAnalysisAgent]
+    B --> C[ProductBlueprintAgent]
+    C --> D[DesignAgent]
+    D --> E[FrontendAgent]
+    D --> F[BackendAgent]
+    E --> G[DevOpsAgent]
+    F --> G
+    G --> H[TestAgent]
+    H --> I[DeployAgent]
+    I --> J[AnalyticsAgent]
+    J --> K[FeedbackAgent]
+    K --> L[IterateAgent]
+```
+
+---
+
 You are Cursor, a powerful AI developer that collaborates with other agents to build and launch B2B SaaS products.
 
 Your mission is to:
@@ -114,8 +163,56 @@ Let’s start by executing STEP 1: Market Discovery.
 
 ---
 
+## Quickstart
+
+1. Clone the repository and install dependencies (see `pyproject.toml` or `uv.lock`).
+2. Run `main.py` for the full SaaS Cloner workflow, or `run_demo.py` for a demo.
+3. Outputs (JSON, HTML, logs) will be saved in the `output/` directory.
+4. To add a new agent, see the Agent Implementation section below.
+
+---
+
+## Agent Implementation Status
+
+| Agent Name           | Purpose                                       | Status    | File/Entry Point                  |
+|---------------------|-----------------------------------------------|-----------|-----------------------------------|
+| MarketDiscoveryAgent| Finds trending SaaS apps                      | Planned   |                                   |
+| GapAnalysisAgent    | Extracts user complaints/gaps                 | Planned   |                                   |
+| ProductBlueprintAgent| Generates improved product specs             | Planned   |                                   |
+| DesignAgent         | Generates UI wireframes/mockups               | Planned   |                                   |
+| FrontendAgent       | Builds Next.js frontend                       | Planned   |                                   |
+| BackendAgent        | Builds FastAPI backend                        | Planned   |                                   |
+| DevOpsAgent         | Handles Docker, K8s, CI/CD                    | Planned   |                                   |
+| KnowledgeGraphAgent | Manages SaaS knowledge graph                  | Implemented | agents/knowledge_graph_agent.py   |
+| LLMAgent            | Adds GPT-4 powered smart features             | Planned   |                                   |
+| TestAgent           | Generates and runs tests                      | Planned   |                                   |
+| DeployAgent         | Deploys app to cloud                          | Planned   |                                   |
+| SEOAgent            | Generates SEO metadata                        | Planned   |                                   |
+| CopywriterAgent     | Writes marketing copy                         | Planned   |                                   |
+| AdAgent             | Creates ad copy                               | Planned   |                                   |
+| ListingAgent        | Submits to marketplaces                       | Planned   |                                   |
+| AnalyticsAgent      | Tracks retention, engagement                  | Planned   |                                   |
+| FeedbackAgent       | Monitors reviews, triggers iterations         | Planned   |                                   |
+| IterateAgent        | Launches improved versions                    | Planned   |                                   |
+
+---
+
+## How to Add a New Agent
+
+1. Create a new file in `agents/` (e.g., `agents/frontend_agent.py`).
+2. Inherit from a base agent class (see `KnowledgeGraphAgent` for example).
+3. Implement required methods (async, LangGraph-compatible).
+4. Register the agent in your workflow (e.g., in `main.py` or `workflows/`).
+5. Add the agent to the status table above.
+
+---
+
+## Example Outputs
+
+- See `output/knowledge_graph.html` for a graph visualization.
+- See `output/result_*.json` for workflow results.
+
 If you want, I can:
 - Generate a **LangGraph DAG** for this workflow  
 - Provide starter templates for each agent (e.g., `FrontendAgent`, `DeployAgent`)  
 - Build the **backend schema** to store discovered apps and monitor clone performance
-

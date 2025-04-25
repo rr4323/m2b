@@ -2,7 +2,8 @@
 Frontend Agent for developing the frontend of SaaS products.
 """
 import logging
-from typing import Dict, Any, List
+import os
+from typing import Dict, Any
 
 from agents.base_agent import BaseAgent
 from utils.openai_utils import generate_json_completion, generate_completion
@@ -25,7 +26,7 @@ class FrontendAgent(BaseAgent):
             input_data (Dict[str, Any]): Input data containing product blueprint and design
                 
         Returns:
-            Dict[str, Any]: The frontend implementation details
+            Dict[str, Any]: The frontend implementation details and output path
         """
         self.log_info("Starting frontend development")
         
@@ -42,8 +43,27 @@ class FrontendAgent(BaseAgent):
             self.log_warning("Insufficient data for frontend development")
             return {"frontend_result": {}, "error": "Insufficient data for frontend development"}
         
-        # For now, we'll return some mock frontend implementation data
-        # In a real implementation, we would generate actual code
+        # Example: Generate a simple React component from blueprint
+        output_dir = "output/frontend/"
+        os.makedirs(output_dir, exist_ok=True)
+        component_name = blueprint.get("name", "App").replace(" ", "")
+        component_file = os.path.join(output_dir, f"{component_name}.jsx")
+        component_code = f"""
+import React from 'react';
+
+export default function {component_name}() {{
+    return (
+        <div style={{{{ padding: 32 }}}}>
+            <h1>{blueprint.get('name', 'Product')}</h1>
+            <p>{blueprint.get('description', '')}</p>
+            {{{{/* Add more UI based on design and features */}}}}
+        </div>
+    );
+}}
+"""
+        with open(component_file, "w") as f:
+            f.write(component_code)
+
         frontend_implementation = {
             "tech_stack": {
                 "framework": "React",
@@ -59,40 +79,14 @@ class FrontendAgent(BaseAgent):
                     "Sidebar",
                     "Footer",
                     "MainContent"
-                ],
-                "pages": [
-                    "Dashboard",
-                    "Settings",
-                    "Profile",
-                    "Authentication",
-                    "Billing",
-                    "Documentation"
-                ],
-                "shared": [
-                    "Button",
-                    "Input",
-                    "Card",
-                    "Modal",
-                    "Dropdown",
-                    "Toast",
-                    "Table"
                 ]
             },
-            "responsiveness": "Fully responsive with mobile-first approach",
-            "accessibility": "WCAG 2.1 AA compliant",
-            "localization": "i18next for multi-language support",
-            "performance": {
-                "code_splitting": "Per-route code splitting",
-                "lazy_loading": "Components and images",
-                "bundle_size": "Optimized with webpack",
-                "caching": "Strategic client-side caching"
-            }
+            "main_component_file": component_file
         }
         
         self.log_info("Completed frontend development")
         
         return {
             "frontend_result": frontend_implementation,
-            "product_name": blueprint.get("name", ""),
-            "frontend_status": "completed"
+            "output_path": output_dir
         }
